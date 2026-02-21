@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.rout.imsg-watcher</string>
+
+    <!-- setup.sh replaces INSTALL_DIR with the actual path -->
+    <key>Program</key>
+    <string>INSTALL_DIR/rout-imsg-watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>Rout: iMessage Watcher</string>
+    </array>
+
+    <!-- Auto-restart on crash -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Wait 10s before restarting after a crash -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <!-- Start at login -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>INSTALL_DIR/imsg_watcher.log</string>
+    <key>StandardErrorPath</key>
+    <string>INSTALL_DIR/imsg_watcher.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/REPLACE_WITH_YOUR_USERNAME</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

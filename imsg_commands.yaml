@@ -1,0 +1,49 @@
+# imsg_commands.yaml — command registry for Rout
+# Maps command keys to handler functions in handlers/*.py
+# The watcher loads this on startup to know which commands exist.
+
+commands:
+  # ── Core ──────────────────────────────────────────────────────────────────
+  help:
+    trigger: "help"
+    description: "List all available commands"
+    handler: "core_handlers.help_command"
+
+  status:
+    trigger: "status"
+    description: "Check system status (watcher, config, logs)"
+    handler: "core_handlers.status_command"
+
+  ping:
+    trigger: "ping"
+    description: "Test connectivity"
+    handler: "core_handlers.ping_command"
+
+  # ── General (Claude fallback) ─────────────────────────────────────────────
+  general:claude:
+    trigger: null
+    description: "Route free-form messages to Claude"
+    handler: "general_handlers.claude_command"
+    fallback: true
+
+  # ── Kalshi Trading ────────────────────────────────────────────────────────
+  kalshi:portfolio:
+    trigger: "kalshi: portfolio"
+    description: "Show balance and position summary"
+    handler: "kalshi_handlers.portfolio_command"
+
+  kalshi:positions:
+    trigger: "kalshi: positions"
+    description: "Detailed position breakdown"
+    handler: "kalshi_handlers.positions_command"
+
+  kalshi:markets:
+    trigger: "kalshi: markets"
+    description: "Search or browse prediction markets"
+    handler: "kalshi_handlers.markets_command"
+    args: ["query"]
+
+  kalshi:cache:
+    trigger: "kalshi: cache"
+    description: "Research cache status and freshness"
+    handler: "kalshi_handlers.cache_command"

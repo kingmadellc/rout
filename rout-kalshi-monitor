@@ -1,0 +1,4 @@
+#!/bin/bash
+# Optimus: Kalshi Monitor — hourly trading position alerts
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec /opt/homebrew/bin/python3 "$SCRIPT_DIR/kalshi_exit_monitor.py" "$@"
