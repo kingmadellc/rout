@@ -12,6 +12,7 @@ Rules:
 - Always return a string
 - Handle exceptions gracefully
 - Keep responses short (iMessage-friendly)
+- Optional typed contract: see docs/PLUGIN_SDK.md
 """
 
 
@@ -59,3 +60,8 @@ def compute_command(args: str = "") -> str:
 #     desc: "Short description"
 #     handler: "example_handlers.myfeature_command"
 #     example: "mybot: myfeature hello"
+#
+# Typed SDK pattern:
+#   from sdk.command_contract import context_from_inputs, text_result
+#   ctx = context_from_inputs(args=args, message=message, sender=sender, metadata=metadata)
+#   return text_result("ok").text

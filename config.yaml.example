@@ -12,6 +12,7 @@ user:
   location: "Your City, State"
   latitude: 40.7128        # Auto-set by setup.py geocoding
   longitude: -74.0060      # Auto-set by setup.py geocoding
+  timezone: "America/New_York"
   personality: "casual"    # casual | professional | minimal
   assistant_name: "Rout"
 
@@ -46,3 +47,8 @@ kalshi:
   private_key_file: "kalshi-private.key"
   base_url: "https://api.elections.kalshi.com"
   environment: "production"
+
+# ── Binary Paths (optional overrides) ───────────────────────────────────────
+paths:
+  python: "/usr/bin/python3"
+  imsg: "/opt/homebrew/bin/imsg"

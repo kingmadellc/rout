@@ -3,9 +3,19 @@
 import os
 import sys
 import time
+from pathlib import Path
 
 # Lazy singleton for the Kalshi client
 _client = None
+
+
+def _workspace_root() -> Path:
+    env_workspace = os.environ.get("ROUT_WORKSPACE", "").strip()
+    if env_workspace:
+        p = Path(env_workspace).expanduser()
+        if p.exists():
+            return p
+    return Path(__file__).resolve().parent.parent
 
 
 def _get_client():
@@ -14,10 +24,9 @@ def _get_client():
     if _client is not None:
         return _client
 
-    # Add the hardened directory to path so we can import trading.kalshi_client
-    hardened_dir = os.path.expanduser("~/.openclaw/hardened")
-    if hardened_dir not in sys.path:
-        sys.path.insert(0, hardened_dir)
+    workspace = str(_workspace_root())
+    if workspace not in sys.path:
+        sys.path.insert(0, workspace)
 
     try:
         from trading.kalshi_client import KalshiClient
@@ -36,7 +45,8 @@ def portfolio_command(args=None):
         return "Kalshi client not available. Check trading/kalshi_client.py."
 
     try:
-        balance = client.get_balance()
+        balance_resp = client.get_balance()
+        balance = float(balance_resp.get("balance", 0)) / 100.0 if isinstance(balance_resp, dict) else float(balance_resp)
         positions = client.get_positions()
 
         if not positions:
@@ -69,8 +79,9 @@ def positions_command(args=None):
         lines = [f"Open Positions ({len(positions)} total):"]
         for p in positions[:10]:
             ticker = p.get("ticker", "???")
-            side = p.get("side", "?")
-            qty = p.get("total_traded", 0)
+            net_position = p.get("position", 0)
+            side = "YES" if net_position > 0 else "NO"
+            qty = abs(net_position) or p.get("total_traded", 0)
             cost = abs(p.get("total_cost", 0)) / 100
             lines.append(f"  {ticker}: {side} x{qty} (${cost:.2f})")
 
@@ -109,14 +120,20 @@ def markets_command(args=None):
 
 def cache_command(args=None):
     """Show research cache status with freshness check."""
-    cache_path = os.path.expanduser("~/.openclaw/hardened/.kalshi_research_cache.json")
+    openclaw_dir = Path.home() / ".openclaw"
+    candidates = [
+        openclaw_dir / "state" / "kalshi_research_cache.json",
+        openclaw_dir / "hardened" / ".kalshi_research_cache.json",
+        _workspace_root() / ".kalshi_research_cache.json",
+    ]
+    cache_path = next((p for p in candidates if p.exists()), None)
 
-    if not os.path.exists(cache_path):
+    if cache_path is None:
         return "No research cache found."
 
     try:
-        age = time.time() - os.path.getmtime(cache_path)
-        size = os.path.getsize(cache_path)
+        age = time.time() - cache_path.stat().st_mtime
+        size = cache_path.stat().st_size
 
         if age < 3600:
             freshness = f"FRESH ({int(age / 60)}m ago)"

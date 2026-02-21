@@ -26,6 +26,8 @@ import signal
 import sys
 import importlib.util
 import time
+import shutil
+import inspect
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Callable, Dict, Set, Tuple
@@ -34,15 +36,16 @@ from typing import Optional, Callable, Dict, Set, Tuple
 # CONFIGURATION
 # ============================================================
 
-HARDENED_DIR = Path.home() / ".openclaw" / "hardened"
 OPENCLAW_DIR = Path.home() / ".openclaw"
-COMMANDS_CONFIG = HARDENED_DIR / "imsg_commands.yaml"
 LOG_DIR = OPENCLAW_DIR / "logs"
 LOG_FILE = LOG_DIR / "imsg_watcher.log"
 STATE_FILE = OPENCLAW_DIR / "state" / ".imsg_watcher_state_v3"
 AUDIT_LOG = LOG_DIR / "imsg_audit.jsonl"
 POLL_INTERVAL = 2
 HISTORY_LIMIT = 20
+
+DEFAULT_WORKSPACE = Path(__file__).resolve().parent.parent
+LEGACY_WORKSPACE = OPENCLAW_DIR / "hardened"
 
 # Ensure directories exist
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -62,6 +65,43 @@ def _load_user_config() -> dict:
         return {}
 
 _USER_CFG = _load_user_config()
+
+
+def _resolve_workspace() -> Path:
+    """Pick a runtime workspace that contains handlers + command registry."""
+    override = os.environ.get("ROUT_WORKSPACE")
+    candidates = []
+
+    if override:
+        candidates.append(Path(override).expanduser())
+    candidates.append(DEFAULT_WORKSPACE)
+    candidates.append(LEGACY_WORKSPACE)
+
+    for candidate in candidates:
+        if (candidate / "imsg_commands.yaml").exists() and (candidate / "handlers").is_dir():
+            return candidate
+
+    return DEFAULT_WORKSPACE
+
+
+def _resolve_imsg_bin(cfg: dict) -> str:
+    """Resolve imsg binary path from config or PATH."""
+    paths_cfg = cfg.get("paths", {}) if isinstance(cfg, dict) else {}
+    override = paths_cfg.get("imsg", "")
+    candidates = [override, shutil.which("imsg"), "/opt/homebrew/bin/imsg", "/usr/local/bin/imsg"]
+
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+
+    return "imsg"
+
+
+WORKSPACE = _resolve_workspace()
+COMMANDS_CONFIG = WORKSPACE / "imsg_commands.yaml"
+IMSG_BIN = _resolve_imsg_bin(_USER_CFG)
+OSASCRIPT_BIN = shutil.which("osascript") or "/usr/bin/osascript"
+os.environ["ROUT_WORKSPACE"] = str(WORKSPACE)
 
 KNOWN_SENDERS: Dict[str, str] = _USER_CFG.get("known_senders", {})
 
@@ -126,7 +166,7 @@ end tell'''
 
     try:
         result = subprocess.run(
-            ["osascript", "-e", script],
+            [OSASCRIPT_BIN, "-e", script],
             timeout=30, capture_output=True
         )
         return result.returncode == 0
@@ -218,7 +258,7 @@ class CircuitBreaker:
 
 class CommandWatcher:
     def __init__(self):
-        self.workspace = HARDENED_DIR
+        self.workspace = WORKSPACE
         self.config = self._load_config(COMMANDS_CONFIG)
         self.handlers = self._load_handlers()
         self.processed_commands: Set[str] = self._load_processed_commands()
@@ -231,9 +271,13 @@ class CommandWatcher:
         """Load command registry from YAML."""
         try:
             with open(path, 'r') as f:
-                return yaml.safe_load(f)
+                data = yaml.safe_load(f) or {}
+                if not isinstance(data, dict):
+                    raise ValueError("Command config is not a mapping")
+                data.setdefault("commands", {})
+                return data
         except Exception as e:
-            self._log(f"Failed to load config: {e}")
+            self._log(f"Failed to load config at {path}: {e}")
             sys.exit(1)
 
     def _load_handlers(self) -> Dict[str, Callable]:
@@ -351,7 +395,31 @@ class CommandWatcher:
 
         return None
 
-    def execute(self, command_key: str, args: str) -> str:
+    def _invoke_handler(self, handler: Callable, args: str, message: str, sender: str, metadata: dict):
+        """Invoke handlers with backward-compatible signature support."""
+        try:
+            signature = inspect.signature(handler)
+        except (TypeError, ValueError):
+            return handler(args)
+
+        params = signature.parameters
+        accepts_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+        call_kwargs = {}
+
+        if accepts_kwargs or "args" in params:
+            call_kwargs["args"] = args
+        if accepts_kwargs or "message" in params:
+            call_kwargs["message"] = message
+        if accepts_kwargs or "sender" in params:
+            call_kwargs["sender"] = sender
+        if accepts_kwargs or "metadata" in params:
+            call_kwargs["metadata"] = metadata
+
+        if call_kwargs:
+            return handler(**call_kwargs)
+        return handler(args)
+
+    def execute(self, command_key: str, args: str, message: str = "", sender: str = "", metadata: dict = None) -> str:
         """Execute command via handler."""
         registry = self.config.get('commands', {})
 
@@ -366,7 +434,13 @@ class CommandWatcher:
 
         try:
             handler = self.handlers[handler_path]
-            response = handler(args)
+            response = self._invoke_handler(
+                handler,
+                args=args,
+                message=message,
+                sender=sender,
+                metadata=metadata or {},
+            )
 
             audit_log("command_executed", {
                 "command": command_key,
@@ -401,7 +475,7 @@ class CommandWatcher:
             self._log(f"osascript send failed for chat {chat_id}, trying imsg fallback")
             try:
                 result = subprocess.run(
-                    ["/opt/homebrew/bin/imsg", "send",
+                    [IMSG_BIN, "send",
                      "--chat-id", str(chat_id),
                      "--service", "imessage", "--text", response],
                     timeout=30, check=False, capture_output=True
@@ -427,7 +501,7 @@ class CommandWatcher:
         for chat_id in CHAT_IDS:
             try:
                 result = subprocess.run(
-                    ["/opt/homebrew/bin/imsg", "history", "--chat-id", str(chat_id),
+                    [IMSG_BIN, "history", "--chat-id", str(chat_id),
                      "--limit", str(HISTORY_LIMIT), "--attachments", "--json"],
                     capture_output=True,
                     text=True,
@@ -470,7 +544,7 @@ class CommandWatcher:
 
         if was_recent_restart:
             alert = "Heads up — I crashed and just restarted automatically. Everything should be back to normal."
-            _osascript_send(alert, 1)
+            _osascript_send(alert, _personal_id)
 
     def _startup_check(self):
         """Verify imsg history and osascript work before entering main loop."""
@@ -479,7 +553,7 @@ class CommandWatcher:
         # Test 1: imsg history (Full Disk Access)
         try:
             result = subprocess.run(
-                ["/opt/homebrew/bin/imsg", "history", "--chat-id", "1",
+                [IMSG_BIN, "history", "--chat-id", str(_personal_id),
                  "--limit", "1", "--json"],
                 timeout=10, capture_output=True, text=True
             )
@@ -495,7 +569,7 @@ class CommandWatcher:
         # Test 2: osascript Messages.app (Automation permission)
         try:
             result = subprocess.run(
-                ["osascript", "-e", 'tell application "Messages" to get name'],
+                [OSASCRIPT_BIN, "-e", 'tell application "Messages" to get name'],
                 timeout=10, capture_output=True, text=True
             )
             if result.returncode != 0:
@@ -512,7 +586,7 @@ class CommandWatcher:
             self._log(f"STARTUP CHECK FAILED: {summary}")
             _osascript_send(
                 f"Rout startup warning: {summary}. Bot may not respond until this is fixed.",
-                1
+                _personal_id
             )
         else:
             self._log("All startup checks passed")
@@ -599,21 +673,24 @@ class CommandWatcher:
 
                     # Try to parse as command
                     parsed = self.parse_command(text)
+                    attachments = msg.get('attachments') or []
+                    attachment_paths = [
+                        a['original_path'] for a in attachments
+                        if a.get('original_path') and not a.get('missing')
+                    ]
+                    metadata = {
+                        "chat_id": chat_id,
+                        "attachments": attachment_paths,
+                        "is_group": is_group,
+                        "sender_name": sender_name,
+                    }
+
                     if parsed:
                         command_key, args = parsed
                     else:
                         # Fallback: free-form message -> Claude
                         command_key = "general:claude"
-                        attachments = msg.get('attachments') or []
-                        attachment_paths = [
-                            a['original_path'] for a in attachments
-                            if a.get('original_path') and not a.get('missing')
-                        ]
-                        attach_tag = f"[ATTACHMENTS:{json.dumps(attachment_paths)}] " if attachment_paths else ""
-                        if is_group:
-                            args = f"[CHAT_ID:{chat_id}] {attach_tag}[From {sender_name}] {text}"
-                        else:
-                            args = f"[CHAT_ID:{chat_id}] {attach_tag}{text}"
+                        args = text
 
                     timestamp = datetime.now().isoformat()
                     self._log(f"[{timestamp}] Chat {chat_id} | {sender_name}: {command_key} {args[:50] if args else ''}")
@@ -628,7 +705,13 @@ class CommandWatcher:
 
                     processed_in_this_poll.append(cmd_id)
 
-                    response = self.execute(command_key, args)
+                    response = self.execute(
+                        command_key,
+                        args,
+                        message=text,
+                        sender=sender,
+                        metadata=metadata,
+                    )
                     if response is not None:
                         self.send_response(response, chat_id=chat_id)
                         self._log(f"[{timestamp}] Responded.\n")

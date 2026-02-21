@@ -14,6 +14,11 @@ commands:
     description: "Check system status (watcher, config, logs)"
     handler: "core_handlers.status_command"
 
+  doctor:
+    trigger: "doctor"
+    description: "Run installation and runtime diagnostics"
+    handler: "core_handlers.doctor_command"
+
   ping:
     trigger: "ping"
     description: "Test connectivity"
@@ -47,3 +52,20 @@ commands:
     trigger: "kalshi: cache"
     description: "Research cache status and freshness"
     handler: "kalshi_handlers.cache_command"
+
+  # ── Memory Management ─────────────────────────────────────────────────────
+  memory:view:
+    trigger: "memory: view"
+    description: "Show your current persistent memory"
+    handler: "memory_handlers.memory_view_command"
+
+  memory:add:
+    trigger: "memory: add"
+    description: "Append a note to persistent memory"
+    handler: "memory_handlers.memory_add_command"
+    args: ["note"]
+
+  memory:clear:
+    trigger: "memory: clear"
+    description: "Clear memory (requires CONFIRM)"
+    handler: "memory_handlers.memory_clear_command"
