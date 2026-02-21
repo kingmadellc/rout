@@ -5,27 +5,24 @@
     <key>Label</key>
     <string>com.rout.kalshi-monitor</string>
 
-    <!-- setup.sh replaces INSTALL_DIR with the actual path -->
-    <key>Program</key>
-    <string>INSTALL_DIR/rout-kalshi-monitor</string>
-
     <key>ProgramArguments</key>
     <array>
-        <string>Rout: Kalshi Monitor</string>
+        <string>INSTALL_DIR/rout-kalshi-monitor</string>
     </array>
 
-    <!-- Run once an hour -->
+    <key>WorkingDirectory</key>
+    <string>INSTALL_DIR</string>
+
     <key>StartInterval</key>
     <integer>3600</integer>
 
-    <!-- Also run at login -->
     <key>RunAtLoad</key>
     <true/>
 
     <key>StandardOutPath</key>
-    <string>INSTALL_DIR/kalshi_exit_monitor.log</string>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-kalshi-monitor.log</string>
     <key>StandardErrorPath</key>
-    <string>INSTALL_DIR/kalshi_exit_monitor.log</string>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-kalshi-monitor.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>

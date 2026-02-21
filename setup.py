@@ -115,15 +115,16 @@ def geocode(location_str):
         data = resp.json()
         results = data.get("results", [])
         if not results:
-            return None, None, None
+            return None, None, None, None
 
         # If only one result or first is a strong match, use it
         r = results[0]
         display = f"{r.get('name', '')}, {r.get('admin1', '')}, {r.get('country', '')}"
-        return r["latitude"], r["longitude"], display
+        timezone = r.get("timezone", "auto")
+        return r["latitude"], r["longitude"], display, timezone
 
     except Exception:
-        return None, None, None
+        return None, None, None, None
 
 
 # ── Dependency checks ─────────────────────────────────────────────────────────
@@ -138,15 +139,27 @@ def check_dependencies():
             __import__(import_name)
         except ImportError:
             print(f"  Installing {pkg}...")
-            subprocess.run(
+            installed = False
+            for cmd in [
+                [sys.executable, "-m", "pip", "install", pkg, "--quiet", "--user"],
                 [sys.executable, "-m", "pip", "install", pkg, "--quiet", "--break-system-packages"],
-                capture_output=True,
-            )
+            ]:
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if result.returncode == 0:
+                    installed = True
+                    break
+
             try:
                 __import__(import_name)
                 ok(f"{pkg} installed")
             except ImportError:
-                issues.append(f"Failed to install {pkg}")
+                if installed:
+                    issues.append(f"{pkg} installed but still not importable in this Python ({sys.executable})")
+                else:
+                    issues.append(
+                        f"Failed to install {pkg}. Try manually:\n"
+                        f"  {sys.executable} -m pip install --user {pkg}"
+                    )
 
     # imsg CLI
     imsg_path = shutil.which("imsg") or "/opt/homebrew/bin/imsg"
@@ -236,6 +249,7 @@ def main():
     ex_chats = existing.get("chats", {})
     ex_senders = existing.get("known_senders", {})
     ex_handles = existing.get("chat_handles", {})
+    ex_paths = existing.get("paths", {})
 
     # ── Your info ─────────────────────────────────────────────────────────────
 
@@ -268,16 +282,19 @@ def main():
     # Geocode
     lat = ex_user.get("latitude")
     lon = ex_user.get("longitude")
+    timezone = ex_user.get("timezone", "auto")
     print(f"  Geocoding {location_str}...")
-    geo_lat, geo_lon, geo_display = geocode(location_str)
+    geo_lat, geo_lon, geo_display, geo_timezone = geocode(location_str)
     if geo_lat is not None:
         lat, lon = geo_lat, geo_lon
+        timezone = geo_timezone or timezone
         ok(f"Found: {geo_display} ({lat:.4f}, {lon:.4f})")
     elif lat and lon:
         ok(f"Using saved coordinates ({lat}, {lon})")
     else:
         warn("Couldn't geocode — weather will use approximate coordinates")
-        lat, lon = 40.7128, -74.0060  # Seattle fallback
+        lat, lon = 40.7128, -74.0060  # New York fallback
+        timezone = "America/New_York"
 
     # ── Personality ───────────────────────────────────────────────────────────
 
@@ -504,6 +521,7 @@ def main():
             "location": location_str,
             "latitude": round(lat, 4),
             "longitude": round(lon, 4),
+            "timezone": timezone,
             "personality": personality,
             "assistant_name": ex_user.get("assistant_name", "Rout"),
         },
@@ -515,6 +533,10 @@ def main():
         "known_senders": known_senders,
         "anthropic_api_key": api_key,
         "kalshi": kalshi_cfg,
+        "paths": {
+            "python": ex_paths.get("python", sys.executable),
+            "imsg": ex_paths.get("imsg", imsg_path if imsg_path else "imsg"),
+        },
     }
 
     # Preserve any extra handles from existing config
@@ -566,7 +588,7 @@ def main():
 
     # ── Make scripts executable ───────────────────────────────────────────────
 
-    for script in ["start_watcher.sh", "stop_watcher.sh", "rout-imsg-watcher"]:
+    for script in ["start_watcher.sh", "stop_watcher.sh", "rout-imsg-watcher", "rout-kalshi-monitor", "setup.sh"]:
         p = SCRIPT_DIR / script
         if p.exists():
             p.chmod(0o755)

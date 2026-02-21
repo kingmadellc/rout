@@ -210,6 +210,16 @@ def _load_chat_history(sender=None, limit=10):
     return ""
 
 
+def _personality_style(personality: str) -> str:
+    """Return prompt style instructions for the selected personality."""
+    styles = {
+        "casual": "Respond like a sharp, helpful friend: short, witty, and direct.",
+        "professional": "Respond like a professional assistant: polished, concise, and clear.",
+        "minimal": "Respond with minimal text: direct facts only, no extra phrasing.",
+    }
+    return styles.get((personality or "").strip().lower(), styles["casual"])
+
+
 def _detect_intent(message):
     """Detect intent from keywords. Returns (intent_type, confidence)."""
     msg_lower = message.lower()
@@ -350,6 +360,7 @@ def _get_weather():
     loc = user_info.get("location", "")
     lat = user_info.get("latitude", 40.7128)
     lon = user_info.get("longitude", -74.0060)
+    timezone = user_info.get("timezone", "auto")
     location_name = loc if loc else "your area"
 
     try:
@@ -363,7 +374,7 @@ def _get_weather():
                 "temperature_unit": "fahrenheit",
                 "wind_speed_unit": "mph",
                 "precipitation_unit": "inch",
-                "timezone": "America/Los_Angeles",
+                "timezone": timezone,
                 "forecast_days": 1,
             },
             timeout=10,
@@ -479,7 +490,7 @@ def _call_claude(message, system_prompt=None, image_data=None, image_media_type=
     try:
         api_key = _get_api_key()
         if not api_key:
-            return "No API token found. Run: python3 ~/.openclaw/hardened/find_token.py — or set ANTHROPIC_API_KEY in your shell."
+            return "No API token found. Re-run setup.py or set ANTHROPIC_API_KEY."
 
         import requests
         headers = {
@@ -545,6 +556,8 @@ def claude_command(args=None, message="", sender=None, metadata=None):
     # Parse any metadata tags from watcher
     meta = metadata or {}
     attachments = meta.get("attachments", [])
+    is_group = bool(meta.get("is_group"))
+    sender_name = meta.get("sender_name", "")
 
     # Check for image attachments
     if attachments:
@@ -626,10 +639,11 @@ def claude_command(args=None, message="", sender=None, metadata=None):
     user_info = user_cfg.get("user", {})
     user_name = user_info.get("name", "")
     user_location = user_info.get("location", "")
+    personality = user_info.get("personality", "casual")
 
     system_parts = [
         "You are Rout, a personal AI assistant texting via iMessage.",
-        "Respond like a sharp, helpful friend — short, casual, no fluff.",
+        _personality_style(personality),
         "This is a text conversation. 2-3 sentences max unless they ask for detail.",
         "No bullet points, no markdown formatting, no bold text — plain text only.",
         "Never say 'based on search results' or hedge. Just give the answer.",
@@ -641,6 +655,11 @@ def claude_command(args=None, message="", sender=None, metadata=None):
         system_parts.append(f"{user_name or 'They'} live in {user_location}. Always use this for anything location-specific — weather, restaurants, events, directions, local news.")
     if memory:
         system_parts.append(f"\nContext about them:\n{memory}")
+    if is_group and sender_name:
+        system_parts.append(
+            f"This message is from a group chat and the sender is {sender_name}. "
+            "Use that sender context in your response when helpful."
+        )
     system_prompt = "\n".join(system_parts)
 
     # Build conversation
@@ -662,7 +681,7 @@ def claude_command(args=None, message="", sender=None, metadata=None):
     try:
         api_key = _get_api_key()
         if not api_key:
-            return "No API token found. Run: python3 ~/.openclaw/hardened/find_token.py — or set ANTHROPIC_API_KEY in your shell."
+            return "No API token found. Re-run setup.py or set ANTHROPIC_API_KEY."
 
         import requests
         headers = {

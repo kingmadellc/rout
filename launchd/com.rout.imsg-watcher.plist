@@ -5,31 +5,27 @@
     <key>Label</key>
     <string>com.rout.imsg-watcher</string>
 
-    <!-- setup.sh replaces INSTALL_DIR with the actual path -->
-    <key>Program</key>
-    <string>INSTALL_DIR/rout-imsg-watcher</string>
-
     <key>ProgramArguments</key>
     <array>
-        <string>Rout: iMessage Watcher</string>
+        <string>INSTALL_DIR/rout-imsg-watcher</string>
     </array>
 
-    <!-- Auto-restart on crash -->
+    <key>WorkingDirectory</key>
+    <string>INSTALL_DIR</string>
+
     <key>KeepAlive</key>
     <true/>
 
-    <!-- Wait 10s before restarting after a crash -->
     <key>ThrottleInterval</key>
     <integer>10</integer>
 
-    <!-- Start at login -->
     <key>RunAtLoad</key>
     <true/>
 
     <key>StandardOutPath</key>
-    <string>INSTALL_DIR/imsg_watcher.log</string>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-imsg-watcher.log</string>
     <key>StandardErrorPath</key>
-    <string>INSTALL_DIR/imsg_watcher.log</string>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-imsg-watcher.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
