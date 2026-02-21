@@ -338,11 +338,19 @@ def main():
     if discovered_chats:
         # Show chats as a friendly list
         print(f"\n  {BOLD}Your iMessage conversations:{NC}\n")
+        chat_rows = []
         for i, c in enumerate(discovered_chats[:15], 1):
-            cid = c.get("chat_id", c.get("id", "?"))
+            cid_raw = c.get("chat_id", c.get("id", i))
             display = c.get("display_name", "")
             identifier = c.get("chat_identifier", "")
             participants = c.get("participants", [])
+            if not isinstance(participants, list):
+                participants = []
+
+            try:
+                cid = int(cid_raw)
+            except (TypeError, ValueError):
+                cid = i
 
             # Build a friendly label
             if display:
@@ -359,52 +367,98 @@ def main():
             tag = f"{DIM}(group){NC}" if is_group else f"{DIM}(1:1){NC}"
 
             print(f"    {CYAN}{i:2d}.{NC} {label}  {tag}")
+            print(f"       {DIM}chat_id={cid} identifier={identifier or '-'}{NC}")
 
-        # Select personal chat
-        print(f"\n  {DIM}Select your personal 1:1 chat (where Rout texts you back){NC}")
-        personal_pick = ask("Enter the number from the list above", default="1")
-        try:
-            idx = int(personal_pick) - 1
-            if 0 <= idx < len(discovered_chats):
-                pc = discovered_chats[idx]
-                personal_chat_id = pc.get("chat_id", pc.get("id", 1))
-                # Auto-set chat handle from identifier
-                identifier = pc.get("chat_identifier", "")
-                if identifier:
-                    extra_handles[int(personal_chat_id)] = [identifier, "buddy"]
-            else:
-                personal_chat_id = 1
-        except ValueError:
-            personal_chat_id = 1
+            chat_rows.append({
+                "index": i,
+                "chat_id": cid,
+                "label": label,
+                "identifier": identifier,
+                "participants": participants,
+                "is_group": is_group,
+                "display": display,
+            })
 
-        # Select group chats (optional)
-        print(f"\n  {DIM}Select group chats to monitor (Rout will respond in these too){NC}")
-        group_pick = ask(
-            "Enter numbers from the list (comma-separated, or blank for none)",
-            default="",
+        by_index = {r["index"]: r for r in chat_rows}
+        one_to_one_rows = [r for r in chat_rows if not r["is_group"]]
+        default_row = one_to_one_rows[0] if one_to_one_rows else chat_rows[0]
+
+        use_default = ask(
+            f'Use "{default_row["label"]}" as your primary chat? (Y/n)',
+            default="y",
         )
-        if group_pick.strip():
-            for num in group_pick.split(","):
-                num = num.strip()
-                try:
-                    idx = int(num) - 1
-                    if 0 <= idx < len(discovered_chats):
-                        gc = discovered_chats[idx]
-                        gid = gc.get("chat_id", gc.get("id"))
-                        if gid and int(gid) != int(personal_chat_id):
-                            group_ids.append(int(gid))
-                            # Set handle for group chat
-                            g_ident = gc.get("chat_identifier", "")
-                            if g_ident:
-                                extra_handles[int(gid)] = [g_ident, "chat"]
-                            # Add participants to known senders
-                            for p in gc.get("participants", []):
+        if use_default.lower().startswith("y"):
+            chosen_row = default_row
+        else:
+            personal_pick = ask(
+                "Enter the number of your primary chat",
+                default=str(default_row["index"]),
+            )
+            try:
+                chosen_row = by_index.get(int(personal_pick), default_row)
+            except ValueError:
+                chosen_row = default_row
+
+        personal_chat_id = int(chosen_row["chat_id"])
+        if chosen_row["identifier"]:
+            handle_type = "chat" if chosen_row["is_group"] else "buddy"
+            extra_handles[personal_chat_id] = [chosen_row["identifier"], handle_type]
+
+        monitor_groups = ask("Also respond in group chats? (y/N)", default="n")
+        if monitor_groups.lower().startswith("y"):
+            group_rows = [
+                r for r in chat_rows
+                if r["is_group"] and int(r["chat_id"]) != int(personal_chat_id)
+            ]
+
+            if not group_rows:
+                warn("No group chats found in the discovered list.")
+            else:
+                print(f"\n  {DIM}Group chats:{NC}")
+                for r in group_rows:
+                    print(f'    {CYAN}{r["index"]:2d}.{NC} {r["label"]}')
+                    print(
+                        f'       {DIM}chat_id={r["chat_id"]} identifier={r["identifier"] or "-"}{NC}'
+                    )
+
+                existing_group_ids = {
+                    int(g) for g in ex_chats.get("group_ids", [])
+                    if str(g).isdigit()
+                }
+                default_group_pick = ",".join(
+                    str(r["index"]) for r in group_rows
+                    if int(r["chat_id"]) in existing_group_ids
+                )
+
+                group_pick = ask(
+                    "Enter numbers to enable (comma-separated, blank for none)",
+                    default=default_group_pick,
+                )
+                if group_pick.strip():
+                    for num in group_pick.split(","):
+                        num = num.strip()
+                        if not num:
+                            continue
+                        try:
+                            row = by_index.get(int(num))
+                            if not row or not row["is_group"]:
+                                continue
+                            gid = int(row["chat_id"])
+                            if gid == int(personal_chat_id):
+                                continue
+                            if gid not in group_ids:
+                                group_ids.append(gid)
+
+                            if row["identifier"]:
+                                extra_handles[gid] = [row["identifier"], "chat"]
+
+                            for p in row["participants"]:
                                 p_str = str(p)
                                 if p_str.startswith("+") and p_str != phone:
-                                    p_name = gc.get("display_name", p_str)
+                                    p_name = row["display"] or p_str
                                     extra_senders[p_str] = p_name
-                except (ValueError, TypeError):
-                    pass
+                        except (ValueError, TypeError):
+                            pass
 
     else:
         # Fallback: manual entry if imsg chats doesn't work
@@ -421,15 +475,17 @@ def main():
         except ValueError:
             personal_chat_id = 1
 
-        group_input = ask(
-            "Group chat IDs to monitor (comma-separated, or blank for none)",
-            default=",".join(str(g) for g in ex_chats.get("group_ids", [])),
-        )
-        if group_input:
-            for g in group_input.split(","):
-                g = g.strip()
-                if g.isdigit():
-                    group_ids.append(int(g))
+        monitor_groups = ask("Also respond in group chats? (y/N)", default="n")
+        if monitor_groups.lower().startswith("y"):
+            group_input = ask(
+                "Group chat IDs to monitor (comma-separated, or blank for none)",
+                default=",".join(str(g) for g in ex_chats.get("group_ids", [])),
+            )
+            if group_input:
+                for g in group_input.split(","):
+                    g = g.strip()
+                    if g.isdigit():
+                        group_ids.append(int(g))
 
     # ── API key ───────────────────────────────────────────────────────────────
 
