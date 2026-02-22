@@ -1,0 +1,19 @@
+# MEMORY.md — Your AI assistant's long-term memory
+# ─────────────────────────────────────────────────
+# This file is loaded into every Claude response as context.
+# Edit it to give your assistant background knowledge about you.
+# MEMORY.md is in .gitignore — it's yours alone, never committed.
+
+## About Me
+- **Name:** Your Name
+- **Location:** Your City, State
+- **Timezone:** America/Los_Angeles
+
+## Family / Household
+- Add family members and relevant context here
+
+## Preferences
+- Add personal preferences, routines, things to remember
+
+## Notes
+- Add anything you want your assistant to always know about you

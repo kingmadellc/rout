@@ -1,0 +1,27 @@
+# User config — never committed
+config.yaml
+
+# API keys
+*.key
+*.pem
+keys/
+
+# Runtime state
+*.json
+*.jsonl
+
+# Logs
+*.log
+*.log.*
+
+# Personal memory
+MEMORY.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+docs/MONETIZATION_STRATEGY.md

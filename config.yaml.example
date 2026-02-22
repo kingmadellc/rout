@@ -1,0 +1,80 @@
+# config.yaml — your personal configuration
+# ─────────────────────────────────────────
+# Copy this file to config.yaml and fill in your values.
+# config.yaml is in .gitignore — it will NEVER be committed.
+# Safe to store API keys and phone numbers here.
+
+# ── You ──────────────────────────────────────────────────────────────────────
+user:
+  name: "Your Name"             # TODO: your first name (used in logs)
+  assistant_name: "Rout"     # name your AI assistant (shows in alerts)
+
+# ── iMessage chat IDs ────────────────────────────────────────────────────────
+# Run `imsg list --json` to find your chat IDs.
+# The personal ID is your 1:1 chat (usually 1).
+# Add group IDs if you want the bot to respond in group threads.
+chats:
+  personal_id: 1                # TODO: your 1:1 iMessage chat ID
+  group_ids: []                 # TODO: e.g. [2] for one group, [2, 3] for two
+
+# ── Known senders ─────────────────────────────────────────────────────────────
+# Maps phone numbers to display names — used in logs and alerts.
+# Add each person whose messages the bot should handle.
+known_senders:
+  "+15551234567": "Your Name"   # TODO: your phone number and name
+  # "+15559876543": "Family Member"
+
+# ── Chat handles (for sending via osascript) ──────────────────────────────────
+# Maps chat_id -> [handle, type] for outgoing iMessage via Messages.app.
+# type = "buddy" for 1:1 chats, "chat" for group threads.
+# For group handles: query ~/Library/Messages/chat.db or run `imsg list --json`.
+chat_handles:
+  1: ["+15551234567", "buddy"]  # TODO: your 1:1 chat (must match personal_id above)
+  # 2: ["any;+;YOUR-GROUP-UUID-HERE", "chat"]  # group thread example
+
+# ── Anthropic (Claude) ───────────────────────────────────────────────────────
+# If you have OpenClaw installed, the API key is read automatically.
+# No setup needed here.
+anthropic:
+  model: "claude-sonnet-4-5"    # model to use for responses
+  max_tokens: 512
+
+# ── Codex fallback (optional, recommended) ───────────────────────────────────
+# Rout will switch to Codex automatically if Anthropic OAuth enters cooldown,
+# then switch back to Anthropic as soon as cooldown expires.
+codex:
+  enabled: true
+  model: ""                      # optional, e.g. "gpt-5-codex"
+  binary: "codex"                # CLI binary to invoke for fallback
+  timeout_seconds: 120
+
+# ── Kalshi trading (optional) ─────────────────────────────────────────────────
+# Only needed if you want Kalshi trading commands.
+# Set enabled: true and fill in key_id + private_key_path.
+kalshi:
+  enabled: false
+  key_id: "TODO: your-kalshi-api-key-id"
+  private_key_path: "TODO: /path/to/your/kalshi-private.key"
+  starting_balance: 100.0       # your initial deposit (for tracking only)
+
+  # Human-readable names for each ticker (shown in briefings and alerts)
+  # Run `kalshi_briefing.py` — unknown tickers will show raw ticker IDs until mapped here
+  ticker_names:
+    # KXEXAMPLEMKT-26DEC31-XX: "My Friendly Position Name"
+
+  # News search queries for the evening briefing (one per position topic)
+  # Multiple tickers can share a query if they're related (e.g. two shutdown contracts)
+  news_queries:
+    # KXEXAMPLEMKT-26DEC31-XX: "relevant news search query for this market"
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+# Defaults work for Homebrew on Apple Silicon. Adjust if needed.
+paths:
+  imsg: "/opt/homebrew/bin/imsg"
+  python: "/opt/homebrew/bin/python3"
+  codex: "codex"
+
+# ── Watcher tuning ────────────────────────────────────────────────────────────
+watcher:
+  poll_interval: 2              # seconds between iMessage polls
+  history_limit: 10             # conversation turns to include as context

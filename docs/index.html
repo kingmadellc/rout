@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rout — Route Intelligence</title>
+  <style>
+    :root{
+      --midnight:#080935;
+      --text:#EEF2FF;
+      --muted:rgba(238,242,255,.72);
+      --card:rgba(255,255,255,.06);
+      --border:rgba(255,255,255,.10);
+      --cyan:#24E0C9;
+      --blue:#3C6BFF;
+      --magenta:#F03BFF;
+    }
+    body{
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background: radial-gradient(1200px 600px at 30% 40%, rgba(60,107,255,.16), transparent 60%),
+                  radial-gradient(900px 500px at 70% 30%, rgba(240,59,255,.10), transparent 55%),
+                  var(--midnight);
+      color:var(--text);
+    }
+    .wrap{max-width:1040px;margin:0 auto;padding:56px 20px;}
+    .hero{display:grid;grid-template-columns: 1.1fr .9fr;gap:28px;align-items:center;}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;}
+    h1{font-size:52px;letter-spacing:-.02em;margin:0 0 10px;}
+    p{line-height:1.55;color:var(--muted);margin:0 0 18px;}
+    .btns{display:flex;gap:12px;flex-wrap:wrap;}
+    a.btn{display:inline-block;padding:10px 14px;border-radius:12px;border:1px solid var(--border);color:var(--text);text-decoration:none}
+    a.primary{border-color: rgba(36,224,201,.5); box-shadow:0 0 22px rgba(36,224,201,.12) inset;}
+    .small{font-size:13px;color:rgba(238,242,255,.55)}
+    img{max-width:100%;height:auto}
+    @media (max-width: 860px){ .hero{grid-template-columns:1fr} h1{font-size:42px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <img src="./assets/brand/rout-r.png" alt="Rout" style="width:84px;margin-bottom:14px" />
+        <h1>Route Intelligence</h1>
+        <p>Deterministic skill-chain orchestration for OpenClaw. Compose skills, route execution, and keep behavior observable.</p>
+        <div class="btns">
+          <a class="btn primary" href="#">Read the Docs</a>
+          <a class="btn" href="https://github.com/kingmadellc/rout">GitHub</a>
+        </div>
+        <div class="small" style="margin-top:14px">Not an agent. Infrastructure for composable execution.</div>
+      </div>
+      <div class="card">
+        <img src="./assets/diagrams/routing-diagram.svg" alt="Routing diagram"/>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

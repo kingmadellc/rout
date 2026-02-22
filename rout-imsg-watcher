@@ -1,0 +1,4 @@
+#!/bin/bash
+# Wrapper script for launchd — starts the iMessage watcher.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec /usr/bin/env python3 "$SCRIPT_DIR/comms/imsg_watcher.py"

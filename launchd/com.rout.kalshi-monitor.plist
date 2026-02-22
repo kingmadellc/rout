@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.rout.kalshi-monitor</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>INSTALL_DIR/rout-kalshi-monitor</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>INSTALL_DIR</string>
+
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-kalshi-monitor.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-kalshi-monitor.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/REPLACE_WITH_YOUR_USERNAME</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>
