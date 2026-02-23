@@ -48,10 +48,47 @@ Most AI assistants are chat windows you have to go to. Rout meets you where you 
 
 ### Requirements
 
-- macOS (uses Messages.app, Calendar.app, Reminders.app)
-- [OpenClaw](https://openclaw.ai) installed and configured with an Anthropic API key
-- [imsg CLI](https://github.com/nicholasstephan/imsg) (`brew install imsg`)
-- Python 3.9+
+**Hardware:**
+- Mac Mini or any always-on Mac (MacBook Pro, iMac, Mac Studio, etc.)
+- macOS 12 (Monterey) or later
+- Recommended: 8GB+ RAM, 50GB+ free disk space
+
+**Software Dependencies:**
+
+| Dependency | Version | Purpose | Installation |
+|---|---|---|---|
+| **[OpenClaw](https://openclaw.ai)** | Latest | AI agent runtime and tooling | `npm install -g openclaw` |
+| **[Homebrew](https://brew.sh)** | Latest | Package manager for macOS | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` |
+| **[Node.js](https://nodejs.org/)** | 18+ | JavaScript runtime (for OpenClaw) | `brew install node` |
+| **[Python](https://www.python.org/)** | 3.9+ | Handler runtime | Pre-installed on macOS (check: `python3 --version`) |
+| **[imsg CLI](https://github.com/nicholasstephan/imsg)** | Latest | iMessage database access | `brew install imsg` |
+| **[Ollama](https://ollama.com)** *(optional)* | Latest | Local LLM fallback when cloud APIs are rate-limited | `brew install ollama` |
+
+**Cloud Services:**
+
+At least one of the following (or both for automatic failover):
+
+| Service | Plan | Purpose | Signup |
+|---|---|---|---|
+| **[Claude](https://claude.ai)** | Pro or API | Primary AI provider | [console.anthropic.com](https://console.anthropic.com/) |
+| **[Codex](https://codex.io)** *(coming soon)* | Pro+ | Fallback AI provider | [codex.io](https://codex.io) |
+
+**Optional Services:**
+
+| Service | Purpose |
+|---|---|
+| **[Kalshi](https://kalshi.com)** | Prediction market trading automation |
+
+---
+
+**System Requirements Summary:**
+- ✅ macOS 12+ on always-on Mac hardware
+- ✅ OpenClaw installed and configured
+- ✅ Homebrew + Node.js + Python 3.9+
+- ✅ imsg CLI for iMessage access
+- ✅ Claude Pro/API **or** Codex Pro+ account
+- ⚙️ *(Optional)* Ollama for local LLM fallback
+- ⚙️ *(Optional)* Kalshi account for trading features
 
 ### Install
 

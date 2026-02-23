@@ -130,8 +130,21 @@ def geocode(location_str):
 # ── Dependency checks ─────────────────────────────────────────────────────────
 
 def check_dependencies():
-    """Check for required tools. Returns list of issues."""
+    """Check for required tools. Returns list of issues and warnings."""
     issues = []
+    warnings = []
+
+    print(f"  {BOLD}Required dependencies:{NC}")
+
+    # Python version
+    py_version = sys.version_info
+    if py_version >= (3, 9):
+        ok(f"Python {py_version.major}.{py_version.minor}.{py_version.micro}")
+    else:
+        issues.append(
+            f"Python 3.9+ required, found {py_version.major}.{py_version.minor}.{py_version.micro}\n"
+            f"  Install via Homebrew: brew install python@3.11"
+        )
 
     # Python packages
     for pkg, import_name in [("pyyaml", "yaml"), ("requests", "requests")]:
@@ -161,14 +174,82 @@ def check_dependencies():
                         f"  {sys.executable} -m pip install --user {pkg}"
                     )
 
+    # Homebrew
+    brew_path = shutil.which("brew")
+    if brew_path:
+        ok(f"Homebrew found at {brew_path}")
+    else:
+        issues.append(
+            "Homebrew not found — install from: https://brew.sh\n"
+            '  Run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+        )
+
+    # Node.js
+    node_path = shutil.which("node")
+    if node_path:
+        try:
+            result = subprocess.run([node_path, "--version"], capture_output=True, text=True, timeout=5)
+            version = result.stdout.strip()
+            ok(f"Node.js {version}")
+        except Exception:
+            ok(f"Node.js found at {node_path}")
+    else:
+        issues.append("Node.js not found — install with: brew install node")
+
+    # OpenClaw
+    openclaw_path = shutil.which("openclaw")
+    if openclaw_path:
+        try:
+            result = subprocess.run([openclaw_path, "--version"], capture_output=True, text=True, timeout=5)
+            version = result.stdout.strip() or "installed"
+            ok(f"OpenClaw {version}")
+        except Exception:
+            ok(f"OpenClaw found at {openclaw_path}")
+    else:
+        issues.append(
+            "OpenClaw not found — install with: npm install -g openclaw\n"
+            "  See: https://openclaw.ai"
+        )
+
     # imsg CLI
     imsg_path = shutil.which("imsg") or "/opt/homebrew/bin/imsg"
     if os.path.isfile(imsg_path) and os.access(imsg_path, os.X_OK):
-        ok(f"imsg found at {imsg_path}")
+        ok(f"imsg CLI found at {imsg_path}")
     else:
         issues.append("imsg CLI not found — install with: brew install imsg")
 
-    return issues
+    # Optional dependencies
+    print(f"\n  {BOLD}Optional dependencies:{NC}")
+
+    # Ollama (local LLM fallback)
+    ollama_path = shutil.which("ollama")
+    if ollama_path:
+        try:
+            result = subprocess.run([ollama_path, "--version"], capture_output=True, text=True, timeout=5)
+            version = result.stdout.strip()
+            ok(f"Ollama {version}")
+        except Exception:
+            ok(f"Ollama found at {ollama_path}")
+    else:
+        warn("Ollama not found — install for local LLM fallback: brew install ollama")
+        print(f"    {DIM}(Optional: provides local AI when cloud APIs are rate-limited){NC}")
+
+    # macOS version check
+    try:
+        result = subprocess.run(["sw_vers", "-productVersion"], capture_output=True, text=True, timeout=5)
+        macos_version = result.stdout.strip()
+        major = int(macos_version.split(".")[0])
+        if major >= 12:
+            ok(f"macOS {macos_version}")
+        else:
+            warnings.append(
+                f"macOS 12+ recommended, found {macos_version}\n"
+                f"  Some features may not work on older versions"
+            )
+    except Exception:
+        pass
+
+    return issues, warnings
 
 
 # ── API key test ──────────────────────────────────────────────────────────────
@@ -232,12 +313,20 @@ def main():
     (OPENCLAW_DIR / "keys").mkdir(exist_ok=True)
 
     # Check deps
-    print(f"{BOLD}Checking dependencies...{NC}")
-    issues = check_dependencies()
+    print(f"{BOLD}Checking dependencies...{NC}\n")
+    issues, warnings = check_dependencies()
+    
+    if warnings:
+        print()
+        for w in warnings:
+            warn(w)
+    
     if issues:
+        print()
         for i in issues:
             fail(i)
         print(f"\n{RED}Fix the issues above and re-run setup.{NC}")
+        print(f"{DIM}See README.md for installation instructions.{NC}")
         sys.exit(1)
     print()
 
