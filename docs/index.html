@@ -3,7 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rout — AI Assistant in iMessage</title>
+  <title>Rout — Personal AI Agent for macOS</title>
+  <meta name="description" content="Rout is a personal AI agent that lives in your iMessage. Calendar, reminders, web search, memory, and multi-turn reasoning — all through natural conversation." />
+  <meta property="og:title" content="Rout — Personal AI Agent for macOS" />
+  <meta property="og:description" content="Text it like a friend. Rout lives in iMessage and manages your calendar, reminders, web search, and memory through natural conversation." />
+  <meta property="og:image" content="../assets/social/rout-og-1280x640.png" />
   <style>
     :root{
       --midnight:#080935;
@@ -15,45 +19,217 @@
       --blue:#3C6BFF;
       --magenta:#F03BFF;
     }
+    *{box-sizing:border-box;margin:0;padding:0}
     body{
-      margin:0;
-      font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
       background: radial-gradient(1200px 600px at 30% 40%, rgba(60,107,255,.16), transparent 60%),
                   radial-gradient(900px 500px at 70% 30%, rgba(240,59,255,.10), transparent 55%),
                   var(--midnight);
       color:var(--text);
+      line-height:1.55;
+      overflow-x:hidden;
     }
-    .wrap{max-width:1040px;margin:0 auto;padding:56px 20px;}
-    .hero{display:grid;grid-template-columns: 1.1fr .9fr;gap:28px;align-items:center;}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;}
-    h1{font-size:52px;letter-spacing:-.02em;margin:0 0 10px;}
-    p{line-height:1.55;color:var(--muted);margin:0 0 18px;}
-    .btns{display:flex;gap:12px;flex-wrap:wrap;}
-    a.btn{display:inline-block;padding:10px 14px;border-radius:12px;border:1px solid var(--border);color:var(--text);text-decoration:none}
-    a.primary{border-color: rgba(36,224,201,.5); box-shadow:0 0 22px rgba(36,224,201,.12) inset;}
-    .small{font-size:13px;color:rgba(238,242,255,.55)}
-    img{max-width:100%;height:auto}
-    @media (max-width: 860px){ .hero{grid-template-columns:1fr} h1{font-size:42px}}
+    a{color:var(--cyan);text-decoration:none}
+    .wrap{max-width:1040px;margin:0 auto;padding:56px 24px}
+
+    /* ── Hero ──────────────────────────────────────── */
+    .hero{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:40px;
+      align-items:center;
+    }
+    .hero-text{min-width:0}
+    .hero-text img{width:72px;margin-bottom:16px}
+    h1{font-size:48px;letter-spacing:-.02em;line-height:1.1;margin-bottom:14px}
+    p{color:var(--muted);margin-bottom:18px}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .btn{
+      display:inline-block;padding:9px 14px;border-radius:10px;
+      border:1px solid var(--border);color:var(--text);text-decoration:none;
+      font-size:13px;font-weight:500;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    .btn:hover{border-color:rgba(36,224,201,.4);box-shadow:0 0 14px rgba(36,224,201,.08) inset}
+    .btn.primary{border-color:rgba(36,224,201,.5);box-shadow:0 0 20px rgba(36,224,201,.12) inset}
+    .small{font-size:12px;color:rgba(238,242,255,.45)}
+
+    .hero-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:16px;padding:16px;min-width:0;overflow:hidden;
+    }
+    .hero-card svg{width:100%;height:auto;display:block}
+
+    /* ── Capabilities ─────────────────────────────── */
+    .section{margin-top:64px}
+    h2{font-size:26px;letter-spacing:-.01em;margin-bottom:6px}
+    .cap-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;margin-top:22px;
+    }
+    .cap{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:12px;padding:18px 16px;
+    }
+    .cap-icon{font-size:20px;margin-bottom:6px}
+    .cap h3{font-size:14px;font-weight:600;margin-bottom:5px;color:var(--text)}
+    .cap p{font-size:12.5px;line-height:1.4;margin:0;color:var(--muted)}
+
+    /* ── Architecture ─────────────────────────────── */
+    .arch-grid{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-top:20px;
+    }
+    .arch-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:12px;padding:18px 16px;
+    }
+    .arch-card h3{font-size:14px;font-weight:600;margin-bottom:5px;color:var(--cyan)}
+    .arch-card p{font-size:12.5px;line-height:1.4;margin:0;color:var(--muted)}
+
+    /* ── Footer ───────────────────────────────────── */
+    .foot{margin-top:48px;text-align:center}
+
+    /* ── Responsive ───────────────────────────────── */
+    @media(max-width:900px){
+      .hero{grid-template-columns:1fr;gap:28px}
+      h1{font-size:38px}
+      .cap-grid{grid-template-columns:1fr 1fr}
+      .arch-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:540px){
+      .cap-grid{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
+
+    <!-- Hero -->
     <div class="hero">
-      <div>
-        <img src="../assets/brand/rout-r.png" alt="Rout" style="width:84px;margin-bottom:14px" />
-        <h1>Your AI in iMessage</h1>
-        <p>Rout is a local-first iMessage assistant. Text it like a friend and get Claude-powered replies, commands, memory, and optional Kalshi tools.</p>
+      <div class="hero-text">
+        <img src="../assets/brand/rout-r.png" alt="Rout" />
+        <h1>Your AI agent in&nbsp;iMessage</h1>
+        <p>Rout is a personal AI agent that lives in your texting app. It reads your calendar, creates events, manages reminders, searches the web, and remembers context about you — all through natural conversation. No new apps. No browser tabs.</p>
         <div class="btns">
           <a class="btn primary" href="https://github.com/kingmadellc/rout/blob/main/README.md">Quickstart</a>
           <a class="btn" href="https://github.com/kingmadellc/rout/blob/main/HOW_IT_WORKS.md">How It Works</a>
+          <a class="btn" href="https://github.com/kingmadellc/rout/blob/main/docs/BUILD_YOUR_FIRST_HANDLER.md">Build a Handler</a>
           <a class="btn" href="https://github.com/kingmadellc/rout">GitHub</a>
         </div>
-        <div class="small" style="margin-top:14px">Built for macOS + Messages.app. Runs on your machine.</div>
+        <div class="small">Built on <a href="https://openclaw.ai">OpenClaw</a> · macOS 12+ · Runs locally on your machine</div>
       </div>
-      <div class="card">
-        <img src="../assets/diagrams/routing-diagram.svg" alt="Routing diagram"/>
+      <div class="hero-card">
+        <!-- Inline SVG so it never breaks from path issues -->
+        <svg viewBox="0 0 480 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g1" x1="40" y1="40" x2="440" y2="160" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#24E0C9" stop-opacity=".85"/>
+              <stop offset="55%" stop-color="#3C6BFF" stop-opacity=".75"/>
+              <stop offset="100%" stop-color="#F03BFF" stop-opacity=".70"/>
+            </linearGradient>
+            <filter id="g" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path d="M60 100C140 50 200 50 240 75C280 95 340 130 420 70" stroke="url(#g1)" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+          <path d="M60 100C140 150 200 155 260 125C340 90 380 95 420 145" stroke="url(#g1)" stroke-width="3" stroke-linecap="round" opacity=".38"/>
+          <path d="M240 75C280 55 340 50 370 65" stroke="url(#g1)" stroke-width="2" stroke-linecap="round" opacity=".35"/>
+          <g filter="url(#g)">
+            <circle cx="60" cy="100" r="8" fill="#070935" stroke="#24E0C9" stroke-width="3" opacity=".95"/>
+            <circle cx="240" cy="75" r="7" fill="#070935" stroke="#3C6BFF" stroke-width="3" opacity=".88"/>
+            <circle cx="260" cy="125" r="7" fill="#070935" stroke="#F03BFF" stroke-width="3" opacity=".82"/>
+            <circle cx="370" cy="65" r="6" fill="#070935" stroke="#24E0C9" stroke-width="3" opacity=".78"/>
+            <circle cx="420" cy="70" r="8" fill="#070935" stroke="#3C6BFF" stroke-width="3" opacity=".88"/>
+            <circle cx="420" cy="145" r="8" fill="#070935" stroke="#F03BFF" stroke-width="3" opacity=".78"/>
+          </g>
+          <g font-family="system-ui,sans-serif" font-size="11" fill="#E9EEFF" opacity=".7">
+            <text x="46" y="125">Input</text>
+            <text x="222" y="60">Route</text>
+            <text x="244" y="150">Skill</text>
+            <text x="354" y="52">Branch</text>
+            <text x="390" y="48">Output A</text>
+            <text x="390" y="168">Output B</text>
+          </g>
+        </svg>
       </div>
     </div>
+
+    <!-- Capabilities -->
+    <div class="section">
+      <h2>Capabilities</h2>
+      <p>Every feature is a tool in the agent loop. Claude reasons, calls tools, observes results, and responds — not single-shot Q&A.</p>
+      <div class="cap-grid">
+        <div class="cap">
+          <div class="cap-icon">💬</div>
+          <h3>Natural conversation</h3>
+          <p>Multi-turn agent loop with tool use, chat history, and memory context.</p>
+        </div>
+        <div class="cap">
+          <div class="cap-icon">📅</div>
+          <h3>Calendar</h3>
+          <p>Read events, scan date ranges, or create new events via Calendar.app with safety confirmation.</p>
+        </div>
+        <div class="cap">
+          <div class="cap-icon">✅</div>
+          <h3>Reminders</h3>
+          <p>Read incomplete reminders or create new ones with optional deadlines via Apple Reminders.</p>
+        </div>
+        <div class="cap">
+          <div class="cap-icon">🔍</div>
+          <h3>Web search</h3>
+          <p>DuckDuckGo search for news, scores, weather, current events.</p>
+        </div>
+        <div class="cap">
+          <div class="cap-icon">🧠</div>
+          <h3>Persistent memory</h3>
+          <p>Vector-retrieved context via ChromaDB with MEMORY.md fallback.</p>
+        </div>
+        <div class="cap">
+          <div class="cap-icon">📷</div>
+          <h3>Image analysis</h3>
+          <p>Send a photo and get a description and analysis. Vision built into the agent loop.</p>
+        </div>
+        <div class="cap">
+          <div class="cap-icon">⏰</div>
+          <h3>Proactive messages</h3>
+          <p>Opt-in morning briefing and meeting reminders via cron.</p>
+        </div>
+        <div class="cap">
+          <div class="cap-icon">🔄</div>
+          <h3>Provider failover</h3>
+          <p>Anthropic → Codex → local Ollama. Automatic switching. Zero downtime.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Architecture -->
+    <div class="section">
+      <h2>How it works</h2>
+      <p>Three moving parts: a watcher, a command registry, and handlers.</p>
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h3>Agent loop</h3>
+          <p>Claude reasons through your request with multi-turn tool use. Max 5 iterations, tool results capped at 2k chars.</p>
+        </div>
+        <div class="arch-card">
+          <h3>Safety gate</h3>
+          <p>Calendar writes and reminder creation require explicit yes/no confirmation. Pending actions expire after 1 hour.</p>
+        </div>
+        <div class="arch-card">
+          <h3>Crash-proof</h3>
+          <p>Runs as a macOS launchd service. Auto-restarts after crashes and texts you if it goes down.</p>
+        </div>
+        <div class="arch-card">
+          <h3>Extensible</h3>
+          <p>Every capability is a handler: input string, output string. Add a tool in 3 steps — create, register, restart.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <p class="small">Built by <a href="https://github.com/kingmadellc">KingMade LLC</a> · Powered by <a href="https://openclaw.ai">OpenClaw</a></p>
+    </div>
+
   </div>
 </body>
 </html>

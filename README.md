@@ -4,6 +4,8 @@ Rout is a personal AI agent that lives in your iMessage. It reads your calendar,
 
 Built on [OpenClaw](https://openclaw.ai). Runs as a launchd service on macOS.
 
+**[→ View the project page](https://kingmadellc.github.io/rout/)**
+
 ---
 
 ## Why Rout
