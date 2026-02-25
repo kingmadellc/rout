@@ -33,4 +33,3 @@ external provider APIs. Reports are most useful when they include:
 - permission/automation abuse vectors,
 - credential exposure risks,
 - unsafe command execution or injection paths,
-- auth/signing issues in Kalshi integrations.

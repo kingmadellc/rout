@@ -45,19 +45,12 @@ jobs:
           echo "New feature/skill files detected:"
           echo "$added_feature_files"
 
-          docs_changed="$(git diff --name-only "$range" -- README.md docs/PRIVATE_README.md)"
+          docs_changed="$(git diff --name-only "$range" -- README.md)"
 
           if [ -z "$docs_changed" ]; then
-            echo "::error::New feature/skill files were added, but README.md and docs/PRIVATE_README.md were not updated."
+            echo "::error::New feature/skill files were added, but README.md was not updated."
             exit 1
           fi
-
-          for required in README.md docs/PRIVATE_README.md; do
-            if ! printf '%s\n' "$docs_changed" | grep -Fxq "$required"; then
-              echo "::error::New feature/skill files were added. Please update $required."
-              exit 1
-            fi
-          done
 
           echo "Docs gate passed."
 
@@ -68,7 +61,7 @@ jobs:
 
       - name: Compile
         run: |
-          python -m py_compile setup.py comms/imsg_watcher.py handlers/*.py config/*.py trading/*.py kalshi_exit_monitor.py sdk/*.py
+          python -m py_compile setup.py comms/imsg_watcher.py handlers/*.py config/*.py sdk/*.py
 
       - name: Unit tests
         run: |

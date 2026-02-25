@@ -228,7 +228,6 @@ python3 -m py_compile handlers/stocks_handlers.py
 ## What's Next
 
 - Browse `handlers/general_handlers.py` to see how calendar, reminders, and web search are implemented
-- Check `handlers/kalshi_handlers.py` for an example of handlers that call external APIs with authentication
 - Read [PLUGIN_SDK.md](PLUGIN_SDK.md) for the full typed contract reference
 - Join the [OpenClaw community](https://openclaw.ai) to share your handlers
 

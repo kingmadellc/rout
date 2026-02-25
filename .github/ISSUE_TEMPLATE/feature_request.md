@@ -24,7 +24,6 @@ Check any that apply:
 - [ ] Command handler
 - [ ] Docs/onboarding
 - [ ] Testing/reliability
-- [ ] Integrations (Anthropic/Kalshi)
 
 ## Additional Context
 Links, screenshots, prior art, or related issues.

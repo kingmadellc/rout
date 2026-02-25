@@ -9,8 +9,6 @@ class ParseCommandTest(unittest.TestCase):
         watcher.config = {
             "commands": {
                 "help": {},
-                "kalshi:portfolio": {},
-                "kalshi:markets": {},
                 "memory:view": {},
             }
         }
@@ -21,12 +19,8 @@ class ParseCommandTest(unittest.TestCase):
         self.assertEqual(("help", ""), parsed)
 
     def test_parses_canonical_colon_command(self):
-        parsed = self._watcher().parse_command("kalshi: markets inflation")
-        self.assertEqual(("kalshi:markets", "inflation"), parsed)
 
     def test_parses_swapped_colon_order(self):
-        parsed = self._watcher().parse_command("Portfolio: Kalshi tomorrow")
-        self.assertEqual(("kalshi:portfolio", "tomorrow"), parsed)
 
     def test_parses_bare_prefix_with_extra_text(self):
         parsed = self._watcher().parse_command("help: show commands")

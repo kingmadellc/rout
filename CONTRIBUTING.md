@@ -56,7 +56,7 @@ ROUT_OPENCLAW_DIR=/tmp/rout-openclaw python3 comms/mock_send.py "help"
 Minimum checks before PR:
 
 ```bash
-python3 -m py_compile setup.py comms/imsg_watcher.py handlers/*.py config/*.py trading/*.py kalshi_exit_monitor.py sdk/*.py
+python3 -m py_compile setup.py comms/imsg_watcher.py handlers/*.py config/*.py sdk/*.py
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 

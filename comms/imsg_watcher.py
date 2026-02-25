@@ -352,8 +352,6 @@ class CommandWatcher:
         """Parse text for commands. Returns (command_key, args) or None.
 
         Understands several formats:
-          kalshi: portfolio          -> kalshi:portfolio
-          Portfolio: Kalshi          -> kalshi:portfolio  (swapped order)
           help                       -> help  (bare registry key)
           Help: list all commands    -> help  (bare key, ignores extra words)
           ping                       -> ping
@@ -379,7 +377,6 @@ class CommandWatcher:
         first_word = rest.split()[0].lower() if rest.split() else ""
         extra_args = ' '.join(rest.split()[1:]) if len(rest.split()) > 1 else ""
 
-        # 2a. Canonical format: "kalshi: portfolio [args]"
         canonical_key = f"{prefix}:{first_word}" if first_word else prefix
         if canonical_key in registry:
             return (canonical_key, extra_args)
@@ -388,7 +385,6 @@ class CommandWatcher:
         if prefix in registry:
             return (prefix, rest)
 
-        # 2c. Swapped order: "Portfolio: Kalshi" -> try "kalshi:portfolio"
         if first_word:
             swapped_key = f"{first_word}:{prefix}"
             if swapped_key in registry:
