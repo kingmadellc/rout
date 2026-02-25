@@ -18,6 +18,7 @@ Design:
 """
 
 import json
+import logging
 import time
 import hashlib
 import urllib.request
@@ -25,6 +26,8 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+log = logging.getLogger(__name__)
 
 
 # ── Config ──────────────────────────────────────────────────────────────────
@@ -74,9 +77,11 @@ def _init_chroma():
         _chroma_available = True
         return True
     except ImportError:
+        log.info("ChromaDB not installed — using MEMORY.md fallback")
         _chroma_available = False
         return False
-    except Exception:
+    except Exception as e:
+        log.warning("ChromaDB init failed: %s — using MEMORY.md fallback", e)
         _chroma_available = False
         return False
 

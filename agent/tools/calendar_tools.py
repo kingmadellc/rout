@@ -6,6 +6,7 @@ Read and write Apple Calendar events via osascript.
 
 import subprocess
 from datetime import date
+from dateutil import parser as dateparser
 
 
 def read_calendar(date_offset_days: int = 0) -> str:
@@ -50,9 +51,30 @@ def read_calendar_range(days: int = 7) -> str:
     return "\n".join(events) if events else "No events found in the next {days} days."
 
 
+def _validate_date(date_str: str) -> str:
+    """Validate and normalize a date string for AppleScript.
+    Returns a consistently formatted date string or raises ValueError."""
+    try:
+        parsed = dateparser.parse(date_str)
+        # AppleScript expects "Month Day, Year" format
+        return parsed.strftime("%B %d, %Y")
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Invalid date format '{date_str}': {e}")
+
+
 def create_event(title: str, date_str: str, start_hour: int, start_min: int,
                  duration_hours: float = 1.0, calendar_name: str = "Home") -> str:
     """Create a Calendar.app event via osascript."""
+    # Validate date before passing to AppleScript
+    try:
+        date_str = _validate_date(date_str)
+    except ValueError as e:
+        return f"[Calendar error: {e}]"
+
+    # Validate time range
+    if not (0 <= start_hour <= 23 and 0 <= start_min <= 59):
+        return f"[Calendar error: Invalid time {start_hour}:{start_min:02d}]"
+
     # Sanitize inputs for AppleScript
     title = title.replace('"', '\\"').replace('\\', '\\\\')
     calendar_name = calendar_name.replace('"', '\\"')

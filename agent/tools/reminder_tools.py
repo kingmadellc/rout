@@ -8,6 +8,8 @@ import os
 import subprocess
 import tempfile
 
+from dateutil import parser as dateparser
+
 
 def create_reminder(title: str, notes: str = "", list_name: str = "Reminders",
                     deadline: str = "") -> str:
@@ -17,6 +19,14 @@ def create_reminder(title: str, notes: str = "", list_name: str = "Reminders",
     notes = notes.replace('"', '\\"')
     list_name = list_name.replace('"', '\\"')
     deadline = deadline.replace('"', '\\"')
+
+    # Validate and normalize deadline if provided
+    if deadline:
+        try:
+            parsed = dateparser.parse(deadline)
+            deadline = parsed.strftime("%B %d, %Y %I:%M %p")
+        except (ValueError, TypeError):
+            return f"[Reminders error: Invalid deadline format '{deadline}']"
 
     notes_line = f'set body of newItem to "{notes}"' if notes else ''
     deadline_line = f'set due date of newItem to date "{deadline}"' if deadline else ''

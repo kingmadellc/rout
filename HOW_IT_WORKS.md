@@ -14,7 +14,7 @@ You send an iMessage
           → The watcher sends it back as an iMessage
 ```
 
-That's it. Every feature in Rout — calendar, reminders, trading, image analysis, natural conversation — follows this exact flow.
+That's it. Every feature in Rout — calendar, reminders, web search, image analysis, natural conversation — follows this exact flow.
 
 ## Key Concepts
 
@@ -37,7 +37,7 @@ def ping_command(args: str = "") -> str:
     return "🏓 Pong!"
 ```
 
-Every capability in Rout is a handler: `ping` is a handler, `help` is a handler, `kalshi: portfolio` is a handler, and the full Claude conversation engine is also a handler. They all follow the same pattern — input string, output string.
+Every capability in Rout is a handler: `ping` is a handler, `help` is a handler, `memory: view` is a handler, and the full Claude conversation engine is also a handler. They all follow the same pattern — input string, output string.
 
 Handlers are organized by domain in the `handlers/` directory:
 
@@ -45,21 +45,20 @@ Handlers are organized by domain in the `handlers/` directory:
 |---|---|
 | `core_handlers.py` | System commands: help, status, ping, doctor |
 | `general_handlers.py` | Claude conversations, calendar, reminders, web search, images |
-| `kalshi_handlers.py` | Prediction market trading commands |
+| *(your_handlers.py)* | Add your own — any `_command` function is auto-registered |
 | `memory_handlers.py` | Persistent memory: view, add, clear |
-| `kids_handlers.py` | Grade-appropriate tutoring for kids |
 
 Handlers are loaded dynamically at startup — any file in `handlers/` with functions ending in `_command` gets registered automatically. You never need to modify the watcher to add a new capability.
 
 ### Command Registry
 
-The command registry (`imsg_commands.yaml`) is the routing table that maps trigger phrases to handler functions. When you text "kalshi: portfolio", the registry tells the watcher to call `kalshi_handlers.portfolio_command`.
+The command registry (`imsg_commands.yaml`) is the routing table that maps trigger phrases to handler functions. When you text "memory: view", the registry tells the watcher to call `memory_handlers.view_command`.
 
 ```yaml
-kalshi:portfolio:
-  trigger: "kalshi: portfolio"
-  description: "Show balance and position summary"
-  handler: "kalshi_handlers.portfolio_command"
+memory:view:
+  trigger: "memory: view"
+  description: "Show persistent memory"
+  handler: "memory_handlers.view_command"
 ```
 
 If a message doesn't match any registered command, it falls through to the **fallback handler** — `general_handlers.claude_command` — which routes it to Claude as a natural conversation. This is why you can text Rout anything and get a useful response: unrecognized messages aren't errors, they're conversations.

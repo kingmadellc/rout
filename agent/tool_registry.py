@@ -145,6 +145,28 @@ TOOLS = {
         "safety": DESTRUCTIVE,
     },
 
+    "schedule_timed_reminder": {
+        "description": "Schedule a timed iMessage reminder that alerts the user after N minutes. "
+                       "Use when the user says things like 'remind me in 20 minutes' or 'alert me in an hour'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Reminder message text"},
+                "minutes": {
+                    "type": "integer",
+                    "description": "Minutes from now to send the reminder",
+                },
+            },
+            "required": ["text", "minutes"],
+        },
+        "executor": lambda **kwargs: reminder_tools.schedule_timed_reminder(
+            text=kwargs["text"],
+            minutes=kwargs["minutes"],
+            chat_id=kwargs.get("chat_id", 0),
+            imsg_binary=kwargs.get("imsg_binary", "/opt/homebrew/bin/imsg")),
+        "safety": DESTRUCTIVE,
+    },
+
     "web_search": {
         "description": "Search the web for current information, news, prices, scores, weather, etc.",
         "input_schema": {

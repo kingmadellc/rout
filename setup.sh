@@ -30,15 +30,22 @@ render_plist \
   "$SCRIPT_DIR/launchd/com.rout.imsg-watcher.plist" \
   "$LAUNCH_AGENTS_DIR/com.rout.imsg-watcher.plist"
 
-render_plist \
-  "$SCRIPT_DIR/launchd/com.rout.kalshi-monitor.plist" \
-  "$LAUNCH_AGENTS_DIR/com.rout.kalshi-monitor.plist"
-
-echo ""
-echo "Setup wizard complete."
-echo "Installed launchd plists:"
-echo "  $LAUNCH_AGENTS_DIR/com.rout.imsg-watcher.plist"
-echo "  $LAUNCH_AGENTS_DIR/com.rout.kalshi-monitor.plist"
+# Optional: proactive agent plist (morning briefings, meeting reminders)
+if [ -f "$SCRIPT_DIR/launchd/com.rout.proactive-agent.plist" ]; then
+  render_plist \
+    "$SCRIPT_DIR/launchd/com.rout.proactive-agent.plist" \
+    "$LAUNCH_AGENTS_DIR/com.rout.proactive-agent.plist"
+  echo ""
+  echo "Setup wizard complete."
+  echo "Installed launchd plists:"
+  echo "  $LAUNCH_AGENTS_DIR/com.rout.imsg-watcher.plist"
+  echo "  $LAUNCH_AGENTS_DIR/com.rout.proactive-agent.plist"
+else
+  echo ""
+  echo "Setup wizard complete."
+  echo "Installed launchd plists:"
+  echo "  $LAUNCH_AGENTS_DIR/com.rout.imsg-watcher.plist"
+fi
 echo ""
 echo "Start the watcher:"
 echo "  ./start_watcher.sh"
