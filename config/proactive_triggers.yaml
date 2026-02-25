@@ -1,0 +1,19 @@
+# Proactive agent triggers configuration
+# Controls when Rout sends messages without being asked.
+
+proactive:
+  enabled: true
+  max_messages_per_hour: 3
+
+  # Morning briefing — daily summary of calendar + reminders
+  morning_briefing:
+    enabled: true
+    time: "08:00"                    # 24h format, local time
+    include:
+      - calendar                     # Today's events
+      - reminders                    # Pending reminders
+
+  # Meeting reminders — heads up before events
+  meeting_reminders:
+    enabled: true
+    lookahead_minutes: 30            # How far ahead to check

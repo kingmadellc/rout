@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Enforce docs updates for new features and skills
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            range="$base_sha..${{ github.sha }}"
+          else
+            before="${{ github.event.before }}"
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+              echo "No prior commit context available; skipping docs gate."
+              exit 0
+            fi
+            range="$before..${{ github.sha }}"
+          fi
+
+          added_feature_files="$(
+            git diff --name-status "$range" \
+              | awk '$1=="A" && ($2 ~ /^handlers\// || $2 ~ /^skills\//) { print $2 }'
+          )"
+
+          if [ -z "$added_feature_files" ]; then
+            echo "No new feature/skill files added."
+            exit 0
+          fi
+
+          echo "New feature/skill files detected:"
+          echo "$added_feature_files"
+
+          docs_changed="$(git diff --name-only "$range" -- README.md docs/PRIVATE_README.md)"
+
+          if [ -z "$docs_changed" ]; then
+            echo "::error::New feature/skill files were added, but README.md and docs/PRIVATE_README.md were not updated."
+            exit 1
+          fi
+
+          for required in README.md docs/PRIVATE_README.md; do
+            if ! printf '%s\n' "$docs_changed" | grep -Fxq "$required"; then
+              echo "::error::New feature/skill files were added. Please update $required."
+              exit 1
+            fi
+          done
+
+          echo "Docs gate passed."
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml requests
+
+      - name: Compile
+        run: |
+          python -m py_compile setup.py comms/imsg_watcher.py handlers/*.py config/*.py trading/*.py kalshi_exit_monitor.py sdk/*.py
+
+      - name: Unit tests
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py'

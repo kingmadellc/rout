@@ -1,0 +1,49 @@
+# imsg_commands.yaml — command registry for Rout
+# Maps command keys to handler functions in handlers/*.py
+# The watcher loads this on startup to know which commands exist.
+
+commands:
+  # ── Core ──────────────────────────────────────────────────────────────────
+  help:
+    trigger: "help"
+    description: "List all available commands"
+    handler: "core_handlers.help_command"
+
+  status:
+    trigger: "status"
+    description: "Check system status (watcher, config, logs)"
+    handler: "core_handlers.status_command"
+
+  doctor:
+    trigger: "doctor"
+    description: "Run installation and runtime diagnostics"
+    handler: "core_handlers.doctor_command"
+
+  ping:
+    trigger: "ping"
+    description: "Test connectivity"
+    handler: "core_handlers.ping_command"
+
+  # ── Memory Management ─────────────────────────────────────────────────────
+  memory:view:
+    trigger: "memory: view"
+    description: "Show your current persistent memory"
+    handler: "memory_handlers.memory_view_command"
+
+  memory:add:
+    trigger: "memory: add"
+    description: "Append a note to persistent memory"
+    handler: "memory_handlers.memory_add_command"
+    args: ["note"]
+
+  memory:clear:
+    trigger: "memory: clear"
+    description: "Clear memory (requires CONFIRM)"
+    handler: "memory_handlers.memory_clear_command"
+
+  # ── General (Claude agent — fallback for all free-form messages) ────────
+  general:claude:
+    trigger: null
+    description: "Route free-form messages to Claude agent (calendar, reminders, memory, search)"
+    handler: "general_handlers.claude_command"
+    fallback: true

@@ -1,0 +1,44 @@
+# User config — never committed
+config.yaml
+
+# API keys
+*.key
+*.pem
+keys/
+
+# Runtime state
+*.json
+*.jsonl
+
+# Logs
+*.log
+*.log.*
+
+# Personal memory
+MEMORY.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Backup files
+*.bak
+*.bak.*
+
+# macOS
+.DS_Store
+
+# SQLite databases (local data, not committed)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+db/*.db
+db/*.db-*
+CAPABILITIES.md
+
+# Internal only
+REBUILD_SPEC.md
+docs/MONETIZATION_STRATEGY.md
+archive/
