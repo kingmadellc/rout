@@ -1,0 +1,149 @@
+# Proactive agent triggers configuration
+# Controls when Rout sends messages without being asked.
+# Personality layer — makes Rout feel alive.
+
+proactive:
+  enabled: true
+  max_messages_per_hour: 3
+
+  # Morning briefing — DISABLED: replaced by Claude Code cron job (591b289a)
+  morning_briefing:
+    enabled: false
+    time: "08:00"
+    include:
+      - calendar
+      - reminders
+
+  # Meeting reminders — heads up before events
+  meeting_reminders:
+    enabled: true
+    lookahead_minutes: 30
+
+  # Portfolio drift — alert on significant position moves
+  portfolio_drift:
+    enabled: true
+    threshold_pct: 5.0
+    check_interval_minutes: 60
+
+  # Calendar conflicts — evening check for tomorrow's overlaps
+  calendar_conflicts:
+    enabled: true
+    lookahead_days: 1
+
+  # Cross-platform comparator — Kalshi vs Polymarket price divergences
+  cross_platform:
+    enabled: true
+    divergence_threshold_pct: 8.0
+    check_interval_minutes: 240
+    min_volume: 1000
+    fuzzy_match_threshold: 0.6
+
+  # X signal scanner — DDG search for X/Twitter market signals
+  # Two-stage pipeline: Stage 1 (signal detection) → Stage 2 (novelty + materiality gate)
+  # Stage 3: Only alerts on signals matching active Kalshi positions
+  x_signals:
+    enabled: true
+    check_interval_minutes: 120
+    topics:
+      - "Iran Khamenei"
+      - "Ukraine Russia ceasefire peace deal"
+      - "China Taiwan invasion military"
+      - "Trump tariff executive order"
+      - "government shutdown federal"
+      - "Fed rate cut hike FOMC"
+      - "recession GDP economic"
+      - "Bitcoin BTC ETF SEC regulation"
+      - "Ethereum ETH upgrade"
+      - "Trump Musk DOGE government"
+    min_confidence: 0.8
+    materiality_gate: true
+
+  # ──────────────────────────────────────────────────────────────────
+  # EDGE ENGINE
+  # ──────────────────────────────────────────────────────────────────
+  # Unified pipeline: Kalshi markets → category filter → Polygon enrichment
+  #                   → local Qwen probability estimation → real edge calc
+  #
+  # edge = |market_implied_probability - qwen_estimated_probability|
+  #
+  # Only surfaces markets where:
+  #   1. Category matches your style (political/macro/policy, not weather)
+  #   2. Timeframe is 7-365 days (your sweet spot, not day-trades)
+  #   3. Qwen estimates genuine mispricing above threshold
+  #   4. Confidence is high enough to be actionable
+  edge_engine:
+    enabled: true
+    check_interval_minutes: 90           # Every 90 minutes
+
+    # Market filtering
+    min_volume: 10                       # Low floor — thin markets = where mispricing lives
+    min_days_to_close: 7                 # Skip anything expiring this week
+    max_days_to_close: 365              # Cap at 1 year
+    max_pages: 15                        # Kalshi API pages to fetch (200/page = 3000 markets)
+    category_filter: false               # Blocklist is sufficient — allowlist was too aggressive
+
+    # Qwen analysis
+    max_markets_to_analyze: 20           # Top N markets get Qwen analysis
+    min_qwen_confidence: 0.4             # Drop estimates below this confidence
+    min_edge_pct: 8.0                    # Minimum edge to include in cache
+
+    # Alerting
+    alert_edge_pct: 12.0                 # Minimum edge to push to iMessage
+    max_alerts: 3                        # Max opportunities per alert
+
+  # ──────────────────────────────────────────────────────────────────
+  # Legacy triggers removed (replaced by edge_engine above):
+  #   - kalshi_research: was distance-from-50 heuristic
+  #   - kalshi_edge: was single-page scan with no category filtering
+  # ──────────────────────────────────────────────────────────────────
+
+  # ──────────────────────────────────────────────────────────────────
+  # PERSONALITY LAYER — makes Rout feel alive
+  # ──────────────────────────────────────────────────────────────────
+  # Six systems that transform proactive messaging from a notification
+  # pipeline into something that feels like a presence.
+  #
+  # These settings control the personality wrapper around ALL triggers.
+  # Individual triggers still fire based on their own intervals/thresholds,
+  # but personality decides HOW and WHETHER to speak.
+  personality:
+    enabled: true
+
+    # Editorial voice — adds opinion to data messages
+    editorial_voice: true
+
+    # Context buffer — back-references prior messages from today
+    context_buffer: true
+
+    # Variable timing — urgency-responsive send/hold decisions
+    variable_timing: true
+
+    # Selective silence — suppresses boring/stale content
+    selective_silence: true
+
+    # Micro-initiations — ambient awareness pings (max 2/week)
+    micro_initiations: true
+
+    # Response tracking — adapts to user engagement patterns
+    response_tracking: true
+
+    # After this many sends, suggest adjustments for low-engagement triggers
+    adjustment_suggestion_threshold: 10
+
+# ── Webhook Server ────────────────────────────────────────────────────────
+webhooks:
+  enabled: true
+  port: 7888
+  secret: "YOUR_WEBHOOK_SECRET_HERE"
+  rate_limit: 5
+
+  triggers:
+    kalshi-alert:
+      template: "🎯 Kalshi: {ticker} hit {price}¢ ({direction})"
+      chat_id: 1
+    deploy-notify:
+      template: "🚀 Deploy: {repo} → {env} by {user}"
+      chat_id: 1
+    alert:
+      template: "⚡ {title}: {body}"
+      chat_id: 1

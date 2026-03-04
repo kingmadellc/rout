@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="28">
+  <rect rx="8" width="140" height="28" fill="#0B0C3A"/>
+  <rect rx="8" x="2" y="2" width="136" height="24" fill="#0B0C3A" stroke="#F03BFF" stroke-opacity="0.75"/>
+  <text x="70" y="19" fill="#E9EEFF" font-family="Inter, Arial, sans-serif" font-size="12" text-anchor="middle">Experimental</text>
+</svg>

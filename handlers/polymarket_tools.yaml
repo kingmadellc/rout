@@ -1,0 +1,40 @@
+tools:
+  pm_trending:
+    description: "Get trending Polymarket prediction markets by volume. Optional category filter: 'politics', 'crypto', 'sports', etc."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        category:
+          type: string
+          description: "Optional category filter (e.g. 'politics', 'crypto', 'sports'). Empty for all."
+          default: ""
+
+  pm_odds:
+    description: "Get detailed odds, volume, liquidity, and description for a specific Polymarket market. Use slug from pm_trending."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: "Market slug from pm_trending (e.g. 'will-bitcoin-reach-100k-in-2026')"
+      required: [slug]
+
+  pm_search:
+    description: "Search Polymarket for prediction markets by keyword (e.g. 'bitcoin', 'trump', 'fed rate', 'ai')."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: "Search terms to find relevant markets"
+      required: [query]
+
+  pm_watchlist:
+    description: "Check current odds on user's Polymarket watchlist (configured market slugs)."
+    safety: safe
+    input_schema:
+      type: object
+      properties: {}

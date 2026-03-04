@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rout v0.8.0 — Your AI Agent in iMessage</title>
+<meta name="description" content="Rout is a personal AI agent in iMessage for macOS. Calendar, reminders, prediction markets, web search, subagents, and persistent memory — all through natural conversation. Runs locally on your machine." />
+<meta property="og:title" content="Rout v0.8.0 — Personal AI Agent for macOS" />
+<meta property="og:description" content="Text it like a friend. Rout lives in iMessage — calendar, reminders, Kalshi + Polymarket trading, web search, subagents, and persistent memory. Three-tier safety, provider failover, and crash-proof launchd service." />
+<meta property="og:image" content="https://raw.githubusercontent.com/kingmadellc/rout/main/assets/social/rout-og-1280x640.png" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://kingmadellc.github.io/rout/" />
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/kingmadellc/rout/main/assets/social/rout-og-1280x640.png" />
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --bg-card: #111827;
+    --bg-card-hover: #1a2234;
+    --accent: #00e5a0;
+    --accent-dim: rgba(0, 229, 160, 0.1);
+    --accent-glow: rgba(0, 229, 160, 0.15);
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-bright: #ffffff;
+    --border: #1e293b;
+    --blue: #3b82f6;
+    --purple: #8b5cf6;
+    --amber: #f59e0b;
+    --red: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text-bright);
+    text-decoration: none;
+  }
+  nav .logo .icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--bg);
+    font-weight: 900;
+  }
+  nav .version {
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 229, 160, 0.2);
+  }
+  nav .links {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+  }
+  nav .links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  nav .links a:hover { color: var(--text-bright); }
+  nav .links .cta {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  nav .links .cta:hover { opacity: 0.85; color: var(--bg); }
+
+  /* HERO */
+  .hero {
+    padding: 160px 40px 80px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .hero-text h1 {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.08;
+    color: var(--text-bright);
+    letter-spacing: -0.02em;
+  }
+  .hero-text h1 .highlight {
+    background: linear-gradient(135deg, var(--accent), #4ade80);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-text .subtitle {
+    font-size: 19px;
+    color: var(--text-dim);
+    margin-top: 20px;
+    max-width: 480px;
+    line-height: 1.7;
+  }
+  .hero-text .subtitle strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .hero-ctas {
+    display: flex;
+    gap: 14px;
+    margin-top: 36px;
+  }
+  .hero-ctas a {
+    text-decoration: none;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg) !important;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text) !important;
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--text-dim); }
+  .hero-meta {
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .hero-meta span { margin-right: 16px; }
+  .hero-meta .dot { color: var(--accent); }
+
+  /* iMessage demo */
+  .imessage-demo {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 28px;
+    border: 1px solid var(--border);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+  }
+  .imessage-demo .demo-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .msg {
+    margin-bottom: 12px;
+    display: flex;
+  }
+  .msg.user { justify-content: flex-end; }
+  .msg.agent { justify-content: flex-start; }
+  .msg .bubble {
+    max-width: 280px;
+    padding: 10px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .msg.user .bubble {
+    background: var(--blue);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.agent .bubble {
+    background: #2a3346;
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .msg .bubble .label {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  /* PROOF BAR */
+  .proof-bar {
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    flex-wrap: wrap;
+  }
+  .proof-item {
+    text-align: center;
+  }
+  .proof-item .num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .proof-item .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* SECTION HEADERS */
+  .section {
+    padding: 80px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-header {
+    margin-bottom: 48px;
+  }
+  .section-header .tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+    padding: 4px 12px;
+    background: var(--accent-dim);
+    border-radius: 4px;
+  }
+  .section-header h2 {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -0.01em;
+  }
+  .section-header p {
+    font-size: 17px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    max-width: 600px;
+  }
+
+  /* WHAT'S NEW v0.8.0 */
+  .whats-new {
+    background: linear-gradient(180deg, rgba(0,229,160,0.03) 0%, transparent 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .updates-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .update-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    transition: border-color 0.2s;
+  }
+  .update-card:hover { border-color: rgba(0,229,160,0.3); }
+  .update-card .card-tag {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+  .tag-new { background: rgba(0,229,160,0.1); color: var(--accent); }
+  .tag-improved { background: rgba(59,130,246,0.1); color: var(--blue); }
+  .tag-reliability { background: rgba(139,92,246,0.1); color: var(--purple); }
+  .update-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+  .update-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* CAPABILITIES GRID */
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .cap-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    transition: all 0.2s;
+  }
+  .cap-card:hover {
+    border-color: rgba(0,229,160,0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .cap-card .icon {
+    font-size: 28px;
+    margin-bottom: 14px;
+  }
+  .cap-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+  .cap-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .cap-card.featured {
+    border-color: rgba(0,229,160,0.3);
+    background: linear-gradient(135deg, var(--bg-card), rgba(0,229,160,0.05));
+    grid-column: span 2;
+  }
+  .cap-card.featured .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    padding: 2px 8px;
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 4px;
+  }
+
+  /* HOW IT WORKS */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .how-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+  }
+  .how-card .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 50%;
+    margin-bottom: 14px;
+  }
+  .how-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+  .how-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* DEVELOPER CTA */
+  .dev-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px;
+    text-align: center;
+    margin-top: 20px;
+  }
+  .dev-section h2 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 12px;
+  }
+  .dev-section p {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 500px;
+    margin: 0 auto 28px;
+  }
+  .dev-ctas {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .dev-ctas a {
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: all 0.2s;
+  }
+  .dev-ctas a:hover { border-color: var(--accent); color: var(--accent); }
+  .dev-ctas a.primary-dev {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 40px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    margin-top: 80px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding-top: 120px; gap: 40px; }
+    .hero-text h1 { font-size: 40px; }
+    .cap-grid { grid-template-columns: 1fr; }
+    .cap-card.featured { grid-column: span 1; }
+    .updates-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: 1fr; }
+    nav .links { gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">
+    <img src="https://raw.githubusercontent.com/kingmadellc/rout/main/assets/brand/rout-r.png" alt="Rout" style="width:32px;height:32px;border-radius:6px;">
+    Rout
+    <span class="version">v0.8.0</span>
+  </a>
+  <div class="links">
+    <a href="#capabilities">Capabilities</a>
+    <a href="#how">How it works</a>
+    <a href="#developers">Developers</a>
+    <a href="https://github.com/kingmadellc/rout" class="cta">Get started</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text">
+    <h1>Your AI agent<br>in <span class="highlight">iMessage</span></h1>
+    <p class="subtitle">
+      Text Rout like a friend. It reads your calendar, moves events, sets reminders, trades prediction markets, spawns background research — and <strong>runs locally on your Mac</strong>.
+    </p>
+    <div class="hero-ctas">
+      <a href="https://github.com/kingmadellc/rout" class="btn-primary">Install Rout</a>
+      <a href="#capabilities" class="btn-secondary">See what it does</a>
+    </div>
+    <div class="hero-meta">
+      <span><span class="dot">●</span> macOS 12+</span>
+      <span><span class="dot">●</span> Runs on your machine</span>
+      <span><span class="dot">●</span> MIT licensed</span>
+    </div>
+  </div>
+  <div class="imessage-demo">
+    <div class="demo-header">iMessage → Rout → Response</div>
+    <div class="msg user"><div class="bubble">what's on my calendar today?</div></div>
+    <div class="msg agent"><div class="bubble">You have 3 events today:<br>10 AM — Team standup<br>1 PM — Lunch with Sarah<br>4:30 PM — Dentist</div></div>
+    <div class="msg user"><div class="bubble">move dentist to friday at 3</div></div>
+    <div class="msg agent"><div class="bubble"><div class="label">⚠️ Confirm</div>Create "Dentist" on Fri at 3 PM?<br>Reply <strong>yes</strong> to confirm.</div></div>
+    <div class="msg user"><div class="bubble">portfolio</div></div>
+    <div class="msg agent"><div class="bubble"><div class="label">📊 Kalshi</div>P&L: +$42.50 (3 positions)<br>Top mover: AI regulation — up 12%</div></div>
+    <div class="msg user"><div class="bubble">spawn: summarize AI policy news</div></div>
+    <div class="msg agent"><div class="bubble">✅ Subagent spawned. You'll get a text when it's done.</div></div>
+  </div>
+</section>
+
+<!-- PROOF BAR -->
+<div class="proof-bar">
+  <div class="proof-item">
+    <div class="num">14</div>
+    <div class="desc">Built-in tools</div>
+  </div>
+  <div class="proof-item">
+    <div class="num">&lt;50ms</div>
+    <div class="desc">Message delivery</div>
+  </div>
+  <div class="proof-item">
+    <div class="num">3-tier</div>
+    <div class="desc">Safety system</div>
+  </div>
+  <div class="proof-item">
+    <div class="num">3</div>
+    <div class="desc">LLM failover providers</div>
+  </div>
+</div>
+
+<!-- WHAT'S NEW -->
+<section class="section whats-new">
+  <div class="section-header">
+    <div class="tag">What's new</div>
+    <h2>v0.8.0</h2>
+    <p>Initial public release. Full-featured AI agent with prediction markets, proactive alerts, and personality engine.</p>
+  </div>
+  <div class="updates-grid">
+    <div class="update-card">
+      <span class="card-tag tag-reliability">Reliability</span>
+      <h3>Duplicate message prevention</h3>
+      <p>PID lockfiles and SHA256-based deduplication prevent concurrent proactive runs from sending identical messages within five-minute windows.</p>
+    </div>
+    <div class="update-card">
+      <span class="card-tag tag-new">Developer</span>
+      <h3>--only flag for proactive triggers</h3>
+      <p>Debug a single proactive trigger — morning, meeting, portfolio, or conflicts — without running the full set. Ship fixes faster.</p>
+    </div>
+    <div class="update-card">
+      <span class="card-tag tag-improved">Improved</span>
+      <h3>Polymarket intelligence</h3>
+      <p>Prediction market data alongside Kalshi. Broader market coverage for more informed positioning and trade decisions.</p>
+    </div>
+    <div class="update-card">
+      <span class="card-tag tag-improved">Improved</span>
+      <h3>Three-tier safety gate</h3>
+      <p>SAFE → CONFIRM → DESTRUCTIVE classification for every action. Calendar writes and trades always require explicit confirmation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CAPABILITIES -->
+<section class="section" id="capabilities">
+  <div class="section-header">
+    <div class="tag">Capabilities</div>
+    <h2>Every feature is a tool in the agent loop</h2>
+    <p>Claude reasons, calls tools, observes results, and responds. Multi-turn — not single-shot Q&A.</p>
+  </div>
+  <div class="cap-grid">
+    <div class="cap-card featured">
+      <span class="badge">Core</span>
+      <div class="icon">💬</div>
+      <h3>Natural conversation with memory</h3>
+      <p>Multi-turn agent loop with persistent vector memory via ChromaDB. Rout remembers context about you across conversations — your preferences, habits, and history. No setup, no browser tabs.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">📅</div>
+      <h3>Calendar</h3>
+      <p>Read events, scan date ranges, create and move events via Calendar.app. Safety confirmation on all writes.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">✅</div>
+      <h3>Reminders</h3>
+      <p>Read incomplete reminders or create new ones with optional deadlines via Apple Reminders.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">🔍</div>
+      <h3>Web search</h3>
+      <p>DuckDuckGo search for news, scores, weather, and current events. Results summarized inline.</p>
+    </div>
+    <div class="cap-card featured">
+      <span class="badge">Power user</span>
+      <div class="icon">📊</div>
+      <h3>Prediction markets — Kalshi + Polymarket</h3>
+      <p>Text "portfolio" for live P&L and position status. Browse top markets, buy/sell with risk limits, and get exit monitoring alerts via webhook. Trade audit log for full accountability. Polymarket data for broader market intelligence.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">🧵</div>
+      <h3>Subagents</h3>
+      <p>Spawn background tasks with <code>spawn:</code> — isolated execution in OpenClaw, iMessage notification on completion. 10-min timeout.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">📷</div>
+      <h3>Image analysis</h3>
+      <p>Send a photo and get a description, analysis, or data extraction. Vision built into the agent loop.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">⚡</div>
+      <h3>Real-time push</h3>
+      <p>BlueBubbles Socket.IO for sub-50ms delivery. Proof-of-life guard with automatic polling fallback.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">🪝</div>
+      <h3>Webhook triggers</h3>
+      <p>HTTP endpoint for event-driven alerts. Any service can POST to fire an iMessage — config-driven templates, rate-limited.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">⏰</div>
+      <h3>Proactive messages</h3>
+      <p>Opt-in morning briefing, meeting reminders, portfolio alerts, and calendar conflict detection via cron.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">🔄</div>
+      <h3>Provider failover</h3>
+      <p>Anthropic → Codex → local Ollama. Automatic switching. Zero downtime, even offline.</p>
+    </div>
+    <div class="cap-card">
+      <div class="icon">🛡️</div>
+      <h3>Three-tier safety</h3>
+      <p>SAFE → CONFIRM → DESTRUCTIVE. Calendar writes, trades, and reminder creation require explicit yes/no. Pending actions expire after 1 hour.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="section-header">
+    <div class="tag">Architecture</div>
+    <h2>How it works</h2>
+    <p>Three moving parts: a watcher, a command registry, and handlers.</p>
+  </div>
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="step-num">1</div>
+      <h3>Agent loop</h3>
+      <p>Claude reasons through your request with multi-turn tool use. Max 5 iterations per message, tool results capped at 2k chars. Every tool call is logged.</p>
+    </div>
+    <div class="how-card">
+      <div class="step-num">2</div>
+      <h3>Safety gate</h3>
+      <p>Three-tier classification: SAFE actions execute immediately, CONFIRM actions require yes/no via iMessage, DESTRUCTIVE actions are blocked. Pending confirmations expire after 1 hour.</p>
+    </div>
+    <div class="how-card">
+      <div class="step-num">3</div>
+      <h3>Hybrid transport</h3>
+      <p>BlueBubbles push via Socket.IO with proof-of-life guard. Polling runs alongside push until delivery is proven, auto-falls back if push goes silent.</p>
+    </div>
+    <div class="how-card">
+      <div class="step-num">4</div>
+      <h3>Crash-proof service</h3>
+      <p>Runs as a macOS launchd service. Auto-restarts after crashes. PID lockfiles prevent duplicate processes. Texts you if it goes down.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DEVELOPER SECTION -->
+<section class="section" id="developers">
+  <div class="dev-section">
+    <h2>Build on Rout</h2>
+    <p>Every capability is a handler: input string, output string. Add a tool in 3 steps — create, register, restart.</p>
+    <div class="dev-ctas">
+      <a href="https://github.com/kingmadellc/rout" class="primary-dev">View on GitHub</a>
+      <a href="https://github.com/kingmadellc/rout#quickstart">Quickstart guide</a>
+      <a href="https://github.com/kingmadellc/rout#handlers">Build a handler</a>
+      <a href="https://github.com/kingmadellc/rout#plugins">Plugin SDK</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  Built by <a href="#">KingMade LLC</a> · Powered by <a href="#">OpenClaw</a> · MIT Licensed
+</footer>
+
+</body>
+</html>

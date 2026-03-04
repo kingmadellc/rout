@@ -1,0 +1,25 @@
+#!/bin/bash
+# rout-webhook — CLI for Rout webhook server
+# Usage:
+#   rout-webhook fire kalshi-alert ticker=KXBTC price=52 direction=up
+#   rout-webhook triggers
+#   rout-webhook history --last 10
+#   rout-webhook stats
+#   rout-webhook register my-trigger "Template: {field}" --chat-id 1
+#   rout-webhook reload
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [ "$1" = "reload" ]; then
+    # SIGHUP the running webhook server
+    PID=$(pgrep -f "webhook_server.py" | head -1)
+    if [ -z "$PID" ]; then
+        echo "Webhook server not running."
+        exit 1
+    fi
+    kill -HUP "$PID"
+    echo "Sent SIGHUP to webhook server (PID $PID)"
+    exit 0
+fi
+
+exec /opt/homebrew/bin/python3 "$SCRIPT_DIR/comms/webhook_server.py" "$@"

@@ -1,0 +1,93 @@
+# imsg_commands.yaml — command registry for Rout
+# Maps command keys to handler functions in handlers/*.py
+# The watcher loads this on startup to know which commands exist.
+
+commands:
+  # ── Core ──────────────────────────────────────────────────────────────────
+  help:
+    trigger: "help"
+    description: "List all available commands"
+    handler: "core_handlers.help_command"
+
+  status:
+    trigger: "status"
+    description: "Check system status (watcher, config, logs)"
+    handler: "core_handlers.status_command"
+
+  doctor:
+    trigger: "doctor"
+    description: "Run installation and runtime diagnostics"
+    handler: "core_handlers.doctor_command"
+
+  ping:
+    trigger: "ping"
+    description: "Test connectivity"
+    handler: "core_handlers.ping_command"
+
+  # ── Memory Management ─────────────────────────────────────────────────────
+  memory:view:
+    trigger: "memory: view"
+    description: "Show your current persistent memory"
+    handler: "memory_handlers.memory_view_command"
+
+  memory:add:
+    trigger: "memory: add"
+    description: "Append a note to persistent memory"
+    handler: "memory_handlers.memory_add_command"
+    args: ["note"]
+
+  memory:clear:
+    trigger: "memory: clear"
+    description: "Clear memory (requires CONFIRM)"
+    handler: "memory_handlers.memory_clear_command"
+
+  # ── Kalshi Trading ───────────────────────────────────────────────────────
+  kalshi:portfolio:
+    trigger: "portfolio"
+    description: "Show Kalshi portfolio: cash, positions, P&L"
+    handler: "kalshi_handlers.portfolio_command"
+
+  kalshi:positions:
+    trigger: "positions"
+    description: "Show open Kalshi positions with P&L"
+    handler: "kalshi_handlers.positions_command"
+
+  kalshi:markets:
+    trigger: "markets"
+    description: "List top opportunities from research cache"
+    handler: "kalshi_handlers.markets_command"
+
+  kalshi:cache:
+    trigger: "cache"
+    description: "Show Kalshi research cache status"
+    handler: "kalshi_handlers.cache_command"
+
+  # ── Polymarket (Public API — no auth required) ──────────────────────────
+  polymarket:trending:
+    trigger: "trending"
+    description: "Show trending Polymarket prediction markets"
+    handler: "polymarket_handlers.trending_command"
+
+  polymarket:odds:
+    trigger: "odds"
+    description: "Get detailed odds for a Polymarket market"
+    handler: "polymarket_handlers.odds_command"
+    args: ["slug_or_query"]
+
+  polymarket:search:
+    trigger: "pm search"
+    description: "Search Polymarket for prediction markets"
+    handler: "polymarket_handlers.search_command"
+    args: ["query"]
+
+  polymarket:watchlist:
+    trigger: "pm watchlist"
+    description: "Check odds on your Polymarket watchlist"
+    handler: "polymarket_handlers.watchlist_command"
+
+  # ── General (Claude agent — fallback for all free-form messages) ────────
+  general:claude:
+    trigger: null
+    description: "Route free-form messages to Claude agent (calendar, reminders, memory, search)"
+    handler: "general_handlers.claude_command"
+    fallback: true

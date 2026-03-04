@@ -1,0 +1,67 @@
+# User config — never committed
+config.yaml
+
+# API keys
+*.key
+*.pem
+keys/
+
+# Runtime state
+*.json
+*.jsonl
+
+# Logs
+*.log
+*.log.*
+
+# Personal memory & project context
+MEMORY.md
+CLAUDE.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Backup files
+*.bak
+*.bak.*
+
+# macOS
+.DS_Store
+
+# SQLite databases (local data, not committed)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+db/*.db
+db/*.db-*
+CAPABILITIES.md
+
+# Internal only
+REBUILD_SPEC.md
+archive/
+
+# Audit reports (contain PII references)
+docs/audits/rout-privacy-audit-2026-03-01.md
+
+# Personal symlinks and launcher scripts pointing to hardened dir
+kalshi_exit_monitor.py
+rout-kalshi-scanner
+
+# Coinbase (planned — not yet deployed, handler incomplete)
+handlers/coinbase_handlers.py
+
+# Manual test artifacts
+tests/manual/
+
+# Standalone local-only scripts
+kalshi_briefing.py
+docs/monitor.html
+docs/rout-monitor.html
+
+# All internal audits and code reviews
+docs/audits/*.docx
+docs/code-reviews/
+docs/audits/

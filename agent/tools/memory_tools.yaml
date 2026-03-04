@@ -1,0 +1,22 @@
+tools:
+  query_memory:
+    description: "Search persistent memory for relevant context and preferences."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: "What to search for in memory"
+          default: ""
+
+  add_memory:
+    description: "Save a note to persistent memory."
+    safety: confirm
+    input_schema:
+      type: object
+      properties:
+        note:
+          type: string
+          description: "The note to save"
+      required: [note]

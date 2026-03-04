@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.rout.webhook-server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>INSTALL_DIR/rout-webhook-server</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>INSTALL_DIR</string>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-webhook-server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/REPLACE_WITH_YOUR_USERNAME/.openclaw/logs/launchd-webhook-server.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>HOME</key>
+        <string>/Users/REPLACE_WITH_YOUR_USERNAME</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

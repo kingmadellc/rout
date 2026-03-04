@@ -1,0 +1,56 @@
+tools:
+  read_reminders:
+    description: "Read incomplete reminders."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        list_name:
+          type: string
+          description: "Reminder list name. Default 'Reminders'."
+          default: "Reminders"
+
+  create_reminder:
+    description: "Create a reminder. For timed alerts, use schedule_timed_reminder."
+    safety: destructive
+    input_schema:
+      type: object
+      properties:
+        title:
+          type: string
+          description: "Reminder title"
+        notes:
+          type: string
+          description: "Optional notes or details"
+          default: ""
+        list_name:
+          type: string
+          description: "Reminder list name. Default 'Reminders'."
+          default: "Reminders"
+        deadline:
+          type: string
+          description: "Due date in natural format. Optional."
+          default: ""
+      required: [title]
+
+  schedule_timed_reminder:
+    description: "Alert the user via iMessage after N minutes."
+    safety: destructive
+    input_schema:
+      type: object
+      properties:
+        text:
+          type: string
+          description: "Reminder message text"
+        minutes:
+          type: integer
+          description: "Minutes from now to send the reminder"
+        chat_id:
+          type: integer
+          description: "Chat ID for iMessage delivery. Default 0."
+          default: 0
+        imsg_binary:
+          type: string
+          description: "Path to imsg binary. Default /opt/homebrew/bin/imsg."
+          default: "/opt/homebrew/bin/imsg"
+      required: [text, minutes]

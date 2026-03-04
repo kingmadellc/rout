@@ -1,0 +1,23 @@
+# Memory
+
+## Me
+Your Name. Building with Rout — a personal AI assistant that lives in iMessage.
+
+## Projects
+| Name | What |
+|------|------|
+| **Rout** | Personal AI assistant via iMessage. Mac-hosted, BlueBubbles-based. |
+
+## Terms
+| Term | Meaning |
+|------|---------|
+| Rout | Your AI assistant, communicates via iMessage |
+| BlueBubbles | iMessage bridge/API — key infrastructure for push transport |
+| OpenClaw | Related channel/transport layer for real-time push |
+| push transport | BB Socket.IO real-time delivery |
+| proactive triggers | Rout sending messages unprompted based on events |
+| morning brief | Planned unified daily push |
+
+## Preferences
+- Add your personal preferences here
+- Example: "Wants direct, high-signal responses"

@@ -1,0 +1,4 @@
+#!/bin/bash
+# Wrapper script for launchd — starts the webhook server.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec /opt/homebrew/bin/python3 "$SCRIPT_DIR/comms/webhook_server.py"

@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROUT-TEC // SYSTEM MONITOR v2.0</title>
+<style>
+  /* === RESET & BASE === */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /*
+   * COLOR SYSTEM — Single green phosphor hue
+   * Same hue (#33ff33) at different brightness levels.
+   * No teal, no blue-green. Only amber for warnings, red for errors.
+   */
+
+  body {
+    background: #0a0a0a;
+    color: #33ff33;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 16px;
+    padding-bottom: 40px;
+    min-height: 100vh;
+  }
+
+  /* === CRT EFFECTS === */
+  .scanline {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; z-index: 999;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px, rgba(0,255,0,0.015) 2px, rgba(0,255,0,0.015) 4px
+    );
+  }
+  .vignette {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; z-index: 998;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.5) 100%);
+  }
+  .crt-glow { text-shadow: 0 0 5px rgba(51,255,51,0.4), 0 0 10px rgba(51,255,51,0.1); }
+
+  /* === BOOT SCREEN === */
+  .boot-screen {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: #0a0a0a; z-index: 10000;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .boot-text {
+    white-space: pre; font-size: 14px; line-height: 1.7;
+    color: #33ff33;
+    text-shadow: 0 0 8px rgba(51,255,51,0.5);
+    max-width: 600px;
+  }
+  .boot-cursor { display: inline; animation: cursorBlink 0.5s step-end infinite; }
+  @keyframes cursorBlink { 50% { opacity: 0; } }
+  .boot-screen.fade-out { animation: fadeOut 0.4s ease-out forwards; }
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  /* === HEADER === */
+  .header {
+    border: 1px solid #33ff33;
+    box-shadow: inset 0 0 0 1px rgba(51,255,51,0.15);
+    padding: 8px 16px;
+    margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header h1 { font-size: 16px; font-weight: bold; letter-spacing: 4px; }
+  .header-sub { font-size: 9px; color: #225522; letter-spacing: 2px; }
+  .header .meta { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .header .clock { color: #88ff88; font-size: 14px; }
+  .streak-badge {
+    font-size: 10px; letter-spacing: 1px; color: #447744;
+    border: 1px solid #1a3a1a; padding: 2px 8px;
+  }
+  .streak-badge .streak-val { color: #33ff33; font-weight: bold; }
+
+  /* API dot */
+  .api-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .api-dot.ok { background: #33ff33; box-shadow: 0 0 6px #33ff33; animation: dotPulse 2s ease-in-out infinite; }
+  .api-dot.err { background: #ff3333; box-shadow: 0 0 6px #ff3333; }
+  .api-dot.loading { background: #ffaa00; box-shadow: 0 0 6px #ffaa00; }
+  @keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 6px currentColor; }
+    50% { box-shadow: 0 0 14px currentColor, 0 0 20px currentColor; }
+  }
+
+  /* Keyboard hints */
+  .kbd-hints { font-size: 9px; color: #1a3a1a; letter-spacing: 1px; }
+  .kbd { color: #336633; border: 1px solid #1a3a1a; padding: 0 3px; font-size: 8px; }
+
+  /* === ALERT BAR === */
+  .alert-bar {
+    border: 1px solid #553300;
+    background: rgba(40,20,0,0.4);
+    padding: 6px 14px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    display: none;
+  }
+  .alert-bar.visible { display: block; }
+  .alert-bar .alert-title { color: #ffaa00; letter-spacing: 2px; font-size: 10px; margin-bottom: 4px; }
+  .alert-entry { color: #cc8800; padding: 1px 0; }
+  .alert-entry .alert-time { color: #886600; }
+
+  /* Offline banner */
+  .offline-banner {
+    display: none; position: fixed; top: 0; left: 0; right: 0;
+    background: rgba(255,0,0,0.15); border-bottom: 1px solid #ff3333;
+    color: #ff3333; text-align: center; padding: 6px;
+    font-size: 12px; letter-spacing: 2px; z-index: 1000;
+  }
+  .offline-banner.visible { display: block; }
+
+  /* === GRID & PANELS === */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .panel {
+    border: 1px solid #225522; padding: 10px 14px;
+    background: rgba(0,20,0,0.3); min-height: 80px;
+  }
+  .panel-title {
+    color: #88ff88; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; border-bottom: 1px solid #225522;
+    padding-bottom: 4px; margin-bottom: 8px;
+  }
+  .panel-title::before { content: '\25B8 '; color: #33ff33; }
+  .full-width { grid-column: 1 / -1; }
+
+  /* === UTILITY COLORS === */
+  .ok { color: #33ff33; }
+  .warn { color: #ffaa00; }
+  .err { color: #ff3333; }
+  .off { color: #666666; }
+  .dim { color: #447744; }
+  .bright { color: #aaffaa; }
+
+  /* === ROWS === */
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 3px 0; border-bottom: 1px solid rgba(34,85,34,0.3);
+  }
+  .row:last-child { border-bottom: none; }
+  .row-name { flex: 1; }
+  .row-status { min-width: 100px; text-align: right; }
+  .row-detail { min-width: 140px; text-align: right; color: #669966; font-size: 12px; }
+
+  /* === SEGMENTED BARS (Pip-Boy style) === */
+  .seg-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .seg-label { width: 50px; font-size: 11px; color: #88ff88; }
+  .seg-bar { flex: 1; font-family: monospace; letter-spacing: 0.5px; font-size: 12px; }
+  .seg-value { width: 45px; text-align: right; font-size: 11px; }
+
+  /* === AGENT BOT CARDS === */
+  .bot-grid { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 12px; }
+  .bot-card {
+    text-align: center; padding: 10px 14px; min-width: 130px;
+    border: 1px solid #1a3a1a; background: rgba(0,15,0,0.4);
+    transition: all 0.3s ease; position: relative;
+  }
+  .bot-card.active {
+    border-color: #33ff33; background: rgba(0,30,0,0.5);
+    box-shadow: 0 0 12px rgba(51,255,51,0.1);
+  }
+  .bot-card.working {
+    border-color: #88ff88; background: rgba(0,40,0,0.6);
+    box-shadow: 0 0 20px rgba(51,255,51,0.2), 0 0 40px rgba(51,255,51,0.05);
+  }
+  .bot-card.degraded {
+    border-color: #ffaa00; background: rgba(30,20,0,0.4);
+    box-shadow: 0 0 8px rgba(255,170,0,0.1);
+  }
+  .bot-card.offline {
+    border-color: #1a1a1a; background: rgba(0,5,0,0.2);
+  }
+  .bot-art {
+    font-size: 11px; line-height: 1.2; white-space: pre;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    min-height: 78px; display: flex; align-items: center; justify-content: center;
+  }
+  .bot-card.active .bot-art { color: #33ff33; }
+  .bot-card.working .bot-art { color: #88ff88; }
+  .bot-card.degraded .bot-art { color: #ffaa00; }
+  .bot-card.offline .bot-art { color: #333333; }
+  .bot-name {
+    font-size: 9px; letter-spacing: 2px; margin-top: 4px; text-transform: uppercase;
+  }
+  .bot-card.active .bot-name { color: #88ff88; }
+  .bot-card.working .bot-name { color: #33ff33; }
+  .bot-card.degraded .bot-name { color: #cc8800; }
+  .bot-card.offline .bot-name { color: #444444; }
+  .bot-status-label { font-size: 8px; letter-spacing: 1px; margin-top: 2px; }
+
+  /* Sparkline */
+  .sparkline { display: flex; height: 4px; margin-top: 6px; gap: 1px; }
+  .spark-seg { flex: 1; min-width: 2px; }
+  .spark-active { background: #33ff33; }
+  .spark-degraded { background: #ffaa00; }
+  .spark-offline { background: #ff3333; }
+  .spark-unknown { background: #222222; }
+
+  /* Bot animations */
+  @keyframes botBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  .bot-card.active .bot-art { animation: botBounce 1.5s ease-in-out infinite; }
+
+  @keyframes botWork {
+    0%, 100% { transform: translateY(0) scale(1); }
+    25% { transform: translateY(-4px) scale(1.02); }
+    75% { transform: translateY(-2px) scale(0.98); }
+  }
+  .bot-card.working .bot-art { animation: botWork 0.6s ease-in-out infinite; }
+
+  @keyframes workingGlow {
+    0%, 100% { box-shadow: 0 0 12px rgba(51,255,51,0.15); }
+    50% { box-shadow: 0 0 25px rgba(51,255,51,0.35), 0 0 50px rgba(51,255,51,0.1); }
+  }
+  .bot-card.working { animation: workingGlow 1s ease-in-out infinite; }
+
+  @keyframes botSway {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(2px); }
+  }
+  .bot-card.degraded .bot-art { animation: botSway 2.5s ease-in-out infinite; }
+
+  /* === SKILL AGENT CARDS === */
+  .skill-grid { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px; }
+  .skill-card {
+    text-align: center; padding: 8px 12px; min-width: 130px;
+    border: 1px solid #1a3a1a; background: rgba(0,15,0,0.4);
+    transition: all 0.3s ease;
+  }
+  .skill-card.idle { border-color: #1a3a1a; opacity: 0.6; }
+  .skill-card.running {
+    border-color: #88ff88; background: rgba(0,40,0,0.6);
+    box-shadow: 0 0 20px rgba(51,255,51,0.2);
+    animation: workingGlow 1s ease-in-out infinite;
+    opacity: 1;
+  }
+  .skill-card.completed {
+    border-color: #33ff33; background: rgba(0,30,0,0.5);
+    box-shadow: 0 0 10px rgba(51,255,51,0.1);
+    opacity: 1;
+  }
+  .skill-card.failed {
+    border-color: #ff3333; background: rgba(30,0,0,0.4);
+    box-shadow: 0 0 10px rgba(255,51,51,0.1);
+    opacity: 1;
+  }
+  .skill-art {
+    font-size: 10px; line-height: 1.15; white-space: pre;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    min-height: 65px; display: flex; align-items: center; justify-content: center;
+  }
+  .skill-card.idle .skill-art { color: #333; }
+  .skill-card.running .skill-art { color: #88ff88; animation: botWork 0.6s ease-in-out infinite; }
+  .skill-card.completed .skill-art { color: #33ff33; }
+  .skill-card.failed .skill-art { color: #ff3333; }
+  .skill-name {
+    font-size: 8px; letter-spacing: 2px; margin-top: 3px;
+    text-transform: uppercase; color: #669966;
+  }
+  .skill-card.running .skill-name { color: #33ff33; }
+  .skill-card.completed .skill-name { color: #88ff88; }
+  .skill-card.failed .skill-name { color: #ff5555; }
+  .skill-meta {
+    font-size: 9px; color: #336633; margin-top: 3px;
+    max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .skill-status-label { font-size: 8px; letter-spacing: 1px; margin-top: 2px; }
+
+  /* === INFRASTRUCTURE === */
+  .infra-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .infra-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid #1a3a1a; background: rgba(0,15,0,0.3);
+    min-width: 180px; flex: 1;
+    transition: all 0.3s ease;
+  }
+  .infra-item.active { border-color: #225522; }
+  .infra-item.offline { border-color: #1a1a1a; opacity: 0.6; }
+  .infra-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .infra-dot.active { background: #33ff33; box-shadow: 0 0 8px rgba(51,255,51,0.5); animation: dotPulse 2s ease-in-out infinite; }
+  .infra-dot.degraded { background: #ffaa00; box-shadow: 0 0 6px rgba(255,170,0,0.4); }
+  .infra-dot.offline { background: #444444; }
+  .infra-name { font-size: 12px; color: #88ff88; flex: 1; }
+  .infra-item.offline .infra-name { color: #555; }
+  .infra-detail { font-size: 10px; color: #447744; text-align: right; }
+  .infra-item.offline .infra-detail { color: #333; }
+  .infra-status-text { font-size: 10px; letter-spacing: 1px; }
+
+  /* === DEPENDENCY MAP === */
+  .dep-map {
+    font-size: 10px; line-height: 1.4; white-space: pre;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    padding: 8px 0;
+  }
+  .dep-map .node-up { color: #33ff33; }
+  .dep-map .node-warn { color: #ffaa00; }
+  .dep-map .node-down { color: #ff3333; }
+  .dep-map .node-off { color: #444; }
+  .dep-map .wire { color: #225522; }
+
+  /* === HISTOGRAM === */
+  .histogram-container { padding: 4px 0; }
+  .histogram {
+    display: flex; align-items: flex-end; gap: 1px;
+    height: 55px; padding: 4px 0;
+    border-bottom: 1px solid #1a3a1a;
+  }
+  .hist-bar {
+    flex: 1; min-width: 3px;
+    background: #225522;
+    transition: height 0.5s ease;
+    position: relative;
+  }
+  .hist-bar.has-data { background: #33ff33; }
+  .hist-bar.current-hour {
+    background: #88ff88;
+    box-shadow: 0 0 4px rgba(136,255,136,0.4);
+  }
+  .hist-bar.peak { background: #88ff88; }
+  .hist-labels {
+    display: flex; justify-content: space-between;
+    font-size: 8px; color: #336633; padding-top: 2px;
+  }
+  .hist-total { font-size: 11px; margin-top: 6px; }
+
+  /* === PROACTIVE TRIGGERS === */
+  .trigger-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .trigger-item {
+    padding: 6px 10px;
+    border: 1px solid #1a3a1a; background: rgba(0,15,0,0.3);
+    min-width: 120px; flex: 1; max-width: 200px;
+  }
+  .trigger-item.fired { border-color: #225522; }
+  .trigger-name { font-size: 9px; letter-spacing: 1px; color: #669966; text-transform: uppercase; }
+  .trigger-item.fired .trigger-name { color: #88ff88; }
+  .trigger-time { font-size: 10px; color: #447744; margin-top: 2px; }
+  .trigger-output-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .trigger-output-dot.fired { background: #33ff33; box-shadow: 0 0 4px #33ff33; }
+  .trigger-output-dot.quiet { background: #333; }
+
+  /* === LOG PANEL === */
+  .log-entry {
+    font-size: 11px; padding: 3px 8px; color: #669966;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  .log-entry .log-file { color: #88ff88; white-space: nowrap; }
+  .log-entry .log-age { white-space: nowrap; text-align: right; }
+  @keyframes freshBlink {
+    0%, 100% { background: transparent; }
+    50% { background: rgba(51,255,51,0.08); }
+  }
+  .log-fresh { animation: freshBlink 3s ease-in-out infinite; }
+
+  /* === TICKER === */
+  .ticker-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(0,10,0,0.95);
+    border-top: 1px solid #225522;
+    height: 22px; line-height: 22px;
+    overflow: hidden; z-index: 100;
+    font-size: 10px; letter-spacing: 0.5px;
+  }
+  .ticker-label {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: rgba(0,20,0,0.95); border-right: 1px solid #225522;
+    padding: 0 8px; color: #447744; font-size: 9px; letter-spacing: 2px;
+    z-index: 1; display: flex; align-items: center;
+  }
+  .ticker-track {
+    display: inline-block; white-space: nowrap;
+    padding-left: 80px;
+    animation: tickerScroll var(--ticker-speed, 60s) linear infinite;
+  }
+  @keyframes tickerScroll {
+    0% { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+  }
+  .ticker-item { color: #669966; }
+  .ticker-sep { color: #1a3a1a; margin: 0 20px; }
+
+  /* === V.A.T.S. OVERLAY === */
+  .vats-data {
+    display: none;
+    font-size: 9px; color: #88ff88; line-height: 1.4;
+    border-top: 1px dashed rgba(51,255,51,0.2);
+    margin-top: 6px; padding-top: 4px;
+  }
+  body.vats-active .vats-data { display: block; }
+  body.vats-active .panel { border-color: #33ff33; }
+  body.vats-active .header { border-color: #88ff88; box-shadow: inset 0 0 0 1px rgba(136,255,136,0.2); }
+  .vats-badge {
+    display: none; position: fixed; top: 12px; left: 50%;
+    transform: translateX(-50%);
+    color: #33ff33; font-size: 11px; letter-spacing: 6px; z-index: 600;
+    border: 1px solid #33ff33; padding: 2px 12px;
+    background: rgba(0,20,0,0.9);
+    animation: vatsPulse 1.5s ease-in-out infinite;
+  }
+  body.vats-active .vats-badge { display: block; }
+  @keyframes vatsPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* Sound indicator */
+  .snd-badge {
+    font-size: 9px; color: #333; letter-spacing: 1px;
+    border: 1px solid #1a1a1a; padding: 1px 6px;
+  }
+  .snd-badge.on { color: #33ff33; border-color: #225522; }
+
+  /* === FOOTER === */
+  .footer {
+    text-align: center; color: #112211; font-size: 8px;
+    letter-spacing: 4px; padding: 16px 0 30px;
+    text-transform: uppercase;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+    .bot-grid, .skill-grid { justify-content: center; }
+    .infra-grid { flex-direction: column; }
+    .trigger-grid { flex-direction: column; }
+    .dep-map { font-size: 9px; }
+  }
+</style>
+</head>
+<body class="crt-glow">
+
+<!-- ==================== BOOT SCREEN ==================== -->
+<div class="boot-screen" id="bootScreen" onclick="skipBoot()">
+  <div class="boot-text" id="bootText"></div>
+</div>
+
+<!-- ==================== MAIN DASHBOARD ==================== -->
+<div id="dashboard" style="display:none">
+  <div class="scanline"></div>
+  <div class="vignette"></div>
+  <div class="offline-banner" id="offlineBanner">// API OFFLINE — STATUS SERVER NOT RESPONDING //</div>
+
+  <!-- V.A.T.S. badge -->
+  <div class="vats-badge" id="vatsBadge">V.A.T.S. ACTIVE</div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div>
+        <h1>ROUT // SYSTEM MONITOR</h1>
+        <div class="header-sub">ROUT-TEC INDUSTRIES</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="streak-badge" id="streakBadge" title="All services up">
+        STREAK <span class="streak-val" id="streakValue">--</span>
+      </div>
+      <span>
+        <span class="api-dot loading" id="apiDot"></span>
+        <span id="apiLabel" class="dim" style="font-size:11px">INIT...</span>
+      </span>
+      <span class="snd-badge" id="sndBadge" title="[S] Toggle sound">SND OFF</span>
+      <span class="kbd-hints"><span class="kbd">V</span> VATS <span class="kbd">S</span> SND</span>
+      <span class="clock" id="clock">--:--:--</span>
+    </div>
+  </div>
+
+  <!-- ALERT BAR -->
+  <div class="alert-bar" id="alertBar">
+    <div class="alert-title">TRANSITIONS</div>
+    <div id="alertContent"></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===== AGENTS ===== -->
+    <div class="panel full-width">
+      <div class="panel-title">Agents</div>
+      <div class="bot-grid" id="agentsPanel"><div class="dim">Initializing...</div></div>
+    </div>
+
+    <!-- ===== SKILL AGENTS ===== -->
+    <div class="panel full-width">
+      <div class="panel-title">Skill Agents</div>
+      <div class="skill-grid" id="skillPanel"><div class="dim">Awaiting data...</div></div>
+    </div>
+
+    <!-- ===== INFRASTRUCTURE ===== -->
+    <div class="panel">
+      <div class="panel-title">Infrastructure</div>
+      <div class="infra-grid" id="infraPanel"><div class="dim">Initializing...</div></div>
+    </div>
+
+    <!-- ===== DEPENDENCY MAP ===== -->
+    <div class="panel">
+      <div class="panel-title">Signal Flow</div>
+      <div id="depMapPanel"><div class="dim">Awaiting data...</div></div>
+    </div>
+
+    <!-- ===== SYSTEM ===== -->
+    <div class="panel">
+      <div class="panel-title">System</div>
+      <div id="systemPanel"><div class="dim">Initializing...</div></div>
+    </div>
+
+    <!-- ===== MESSAGE HISTOGRAM ===== -->
+    <div class="panel">
+      <div class="panel-title">Messages (24h)</div>
+      <div id="histogramPanel"><div class="dim">Awaiting data...</div></div>
+    </div>
+
+    <!-- ===== PROACTIVE TRIGGERS ===== -->
+    <div class="panel full-width">
+      <div class="panel-title">Proactive Triggers</div>
+      <div class="trigger-grid" id="triggerPanel"><div class="dim">Awaiting data...</div></div>
+    </div>
+
+    <!-- ===== LOG FILES ===== -->
+    <div class="panel full-width">
+      <div class="panel-title">Log Files</div>
+      <div id="logPanel"><div class="dim">Initializing...</div></div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">ROUT-TEC INDUSTRIES // PERSONAL TERMINAL SYSTEM // v2.0</div>
+
+  <!-- TICKER BAR -->
+  <div class="ticker-bar">
+    <div class="ticker-label">FEED</div>
+    <div class="ticker-track" id="tickerTrack">
+      <span class="ticker-item dim">System monitor online. Awaiting events...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════
+const API_BASE = window.location.origin || "http://127.0.0.1:7890";
+const POLL_INTERVAL = 5000;
+const BOT_FRAME_INTERVAL = 800;
+const WORKING_FRAME_INTERVAL = 400;
+
+let lastData = null;
+let lastHistory = {};
+let botFrame = 0;
+let workingFrame = 0;
+let tickerEvents = [];
+let bootSkipped = false;
+
+// ═══════════════════════════════════════════════════════════
+//  ASCII ART — VAULT BOY AGENTS
+//
+//  Design principles (Fallout Pip-Boy perk cards):
+//  - Each character is a FREE-STANDING figure (no enclosing box)
+//  - Unique silhouette per agent — instantly recognizable
+//  - Compact: 6 lines max for card layout
+//  - Props define the role (antenna, coins, sun, radar, etc.)
+//  - Wink animation: one eye open, one closed — Vault Boy signature
+// ═══════════════════════════════════════════════════════════
+
+const BOT_ART = {
+  // iMessage Watcher — "The Listener"
+  // Hand cupped to ear, antenna on head
+  watcher: {
+    frames: [
+`    }|{
+   (o.-)
+   ~|/|
+    | |
+   / \\
+  =   =`,
+`    }|{
+   (-.o)
+    |\\|~
+    | |
+    / \\
+   =   =`
+    ],
+    working: [
+`   )))|(((
+   (O.O)
+   ~|/|~
+    | |
+   / \\
+  =   =`,
+`   (((|)))
+   (O.o)
+   ~|/|~
+    | |
+   / \\
+  =   =`
+    ],
+    degraded:
+`    .|.
+   (-.-)
+    |/|
+    | |
+   / \\
+  =   =`,
+    dead:
+`    x|x
+   (x.x)
+    |||
+    | |
+   . .
+  .   .`
+  },
+
+  // Kalshi Monitor — "The Gambler"
+  // Flipping a coin, chart bars at feet
+  kalshi: {
+    frames: [
+`     $
+   (o.-)
+    \\|/
+     |
+   / \\
+  _|__|_`,
+`      $
+   (-.o)
+    \\|/
+     |
+    / \\
+  _|__|_`
+    ],
+    working: [
+`   $ $ $
+   (O.O)
+    \\|/
+     |
+   / \\
+  _|__|_`,
+`   $ $ $
+   (O.o)
+    \\|/
+     |
+    / \\
+  _|__|_`
+    ],
+    degraded:
+`
+   (-.-)
+    \\|/
+     |
+   / \\
+  ____`,
+    dead:
+`
+   (x.x)
+    |||
+     |
+   . .
+  ____`
+  },
+
+  // Coinbase Monitor — "The Dealer"
+  // Holding money bags, dollar crown
+  coinbase: {
+    frames: [
+`   [$]
+   (o.-)
+   /|\\
+  $ | $
+   / \\
+  =   =`,
+`   [$]
+   (-.o)
+   /|\\
+  $ | $
+    / \\
+   =   =`
+    ],
+    working: [
+`  $[$]$
+   (O.O)
+   /|\\
+  $ | $
+   / \\
+  =   =`,
+`  $[$]$
+   (O.o)
+   /|\\
+  $ | $
+   / \\
+  =   =`
+    ],
+    degraded:
+`   [.]
+   (-.-)
+    |/|
+    | |
+   / \\
+  =   =`,
+    dead:
+`   [x]
+   (x.x)
+    |||
+    | |
+   . .
+  .   .`
+  },
+
+  // Morning Brief — "The Herald"
+  // Sun rising behind, holding newspaper
+  brief: {
+    frames: [
+`  \\|/
+  -(*)-
+   (o.-)
+   /|[=]
+   / \\
+  =   =`,
+`   \\|/
+   -(*)-
+   (-.o)
+  [=]|\\
+    / \\
+   =   =`
+    ],
+    working: [
+` \\\\|//
+  -(*)-
+   (O.O)
+  [=]|[=]
+   / \\
+  =   =`,
+`  \\\\|//
+   -(*)-
+   (O.o)
+  [=]|[=]
+   / \\
+  =   =`
+    ],
+    degraded:
+`   . .
+   -(.)-
+   (-.-)
+    |/|
+   / \\
+  =   =`,
+    dead:
+`   . .
+   -(.)-
+   (x.x)
+    |||
+   . .
+  .   .`
+  },
+
+  // Proactive Agent — "The Sentinel"
+  // Radar dish on head, scanning pose
+  proactive: {
+    frames: [
+`  =(O)=
+   (o.-)
+    |/|>>
+    | |
+   / \\
+  *   *`,
+`  =(O)=
+   (-.o)
+ <<|\\|
+    | |
+    / \\
+   *   *`
+    ],
+    working: [
+`  =(O)=
+   (O.O)
+  >>|/|>>
+    | |
+   / \\
+  *   *`,
+`  =(O)=
+   (O.o)
+  <<|\\|<<
+    | |
+   / \\
+  *   *`
+    ],
+    degraded:
+`  =(.)=
+   (-.-)
+    |/|
+    | |
+   / \\
+  .   .`,
+    dead:
+`  =(x)=
+   (x.x)
+    |||
+    | |
+   . .
+  .   .`
+  },
+
+  // Generic fallback — classic thumbs up
+  generic: {
+    frames: [
+`
+   (o.-)
+    |/|
+    | | d
+   / \\
+  =   =`,
+`
+   (-.o)
+    |\\|
+  b | |
+    / \\
+   =   =`
+    ],
+    working: [
+`
+   (O.O)
+   d|/|b
+    | |
+   / \\
+  =   =`,
+`
+   (O.o)
+   d|\\|b
+    | |
+   / \\
+  =   =`
+    ],
+    degraded:
+`
+   (-.-)
+    |/|
+    | |
+   / \\
+  =   =`,
+    dead:
+`
+   (x.x)
+    |||
+    | |
+   . .
+  .   .`
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ASCII ART — SKILL AGENTS (Fallout perk-icon style)
+//  Compact 5-line figures with unique tool/prop
+// ═══════════════════════════════════════════════════════════
+
+const SKILL_ART = {
+  // Scaffolder — hard hat, wrench
+  scaffolder: {
+    idle:
+`   /]
+  (. .)
+   |/|
+   / \\
+  . . .`,
+    active:
+`   /]
+  (o.-)
+   |/|~
+   / \\
+  = = =`,
+    running:
+`   /]
+  (O.O)
+  ~|/|~
+   / \\
+  = = =`,
+    failed:
+`   /]
+  (x.x)
+   |||
+   . .
+  ! ! !`
+  },
+  // Pipeline — pipes on head
+  pipeline: {
+    idle:
+`  =|=|=
+  (. .)
+   |/|
+   / \\
+  . . .`,
+    active:
+`  =|=|=
+  (o.-)
+  =|/|=
+   / \\
+  = = =`,
+    running:
+`  =|=|=
+  (O.O)
+  >|/|>
+   / \\
+  = = =`,
+    failed:
+`  =|=|=
+  (x.x)
+   |||
+   . .
+  ! ! !`
+  },
+  // Deploy — rocket on back
+  deploy: {
+    idle:
+`    /\\
+   /|\\
+  (. .)
+   |/|
+   / \\`,
+    active:
+`    /\\
+   /|\\
+  (o.-)
+   |/|
+   / \\`,
+    running:
+`    /\\
+   /|\\
+  (O.O)
+   |/|
+  */ \\*`,
+    failed:
+`    \\/
+   /|\\
+  (x.x)
+   |||
+   . .`
+  },
+  // Debug — magnifying glass
+  debug: {
+    idle:
+`   (O)
+    |
+  (. .)
+   |/|
+   / \\`,
+    active:
+`   (O)
+    |
+  (o.-)
+   |/|?
+   / \\`,
+    running:
+`   (O)
+    |
+  (O.O)
+  ?|/|?
+   / \\`,
+    failed:
+`   (O)
+    |
+  (x.x)
+   |||
+   . .`
+  },
+  // Pulse Check — heartbeat/stethoscope
+  pulse: {
+    idle:
+`  ~..~
+  (. .)
+   |+|
+   / \\
+  . . .`,
+    active:
+`  /\\/\\
+  (o.-)
+   |+|
+   / \\
+  = = =`,
+    running:
+` /\\/\\/\\
+  (O.O)
+  ~|+|~
+   / \\
+  = = =`,
+    failed:
+`  ___
+  (x.x)
+   |+|
+   . .
+  ! ! !`
+  },
+  // Log Scanner — scroll/document
+  logs: {
+    idle:
+`  [=]
+  |:|
+  (. .)
+   |/|
+   / \\`,
+    active:
+`  [=]
+  |:|
+  (o.-)
+   |/|>
+   / \\`,
+    running:
+`  [=]
+  |:|
+  (O.O)
+  >|/|>
+   / \\`,
+    failed:
+`  [X]
+  |:|
+  (x.x)
+   |||
+   . .`
+  }
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  SOUND SYSTEM (Web Audio API — CRT beeps)
+// ═══════════════════════════════════════════════════════════
+
+const SND = {
+  enabled: false,
+  ctx: null,
+  toggle() {
+    this.enabled = !this.enabled;
+    if (this.enabled && !this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const badge = document.getElementById("sndBadge");
+    badge.textContent = this.enabled ? "SND ON" : "SND OFF";
+    badge.className = "snd-badge" + (this.enabled ? " on" : "");
+    return this.enabled;
+  },
+  beep(freq = 800, dur = 0.05, vol = 0.08) {
+    if (!this.enabled || !this.ctx) return;
+    try {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.connect(g); g.connect(this.ctx.destination);
+      o.type = "square";
+      o.frequency.value = freq;
+      g.gain.value = vol;
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+      o.stop(this.ctx.currentTime + dur);
+    } catch(e) {}
+  },
+  transition() { this.beep(600, 0.06); setTimeout(() => this.beep(900, 0.04), 80); },
+  boot() { this.beep(440, 0.08, 0.05); setTimeout(() => this.beep(660, 0.08, 0.05), 100); setTimeout(() => this.beep(880, 0.12, 0.06), 200); },
+  error() { this.beep(200, 0.15, 0.1); setTimeout(() => this.beep(150, 0.2, 0.1), 180); }
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  BOOT SEQUENCE
+// ═══════════════════════════════════════════════════════════
+
+const BOOT_LINES = [
+  { text: "> ROUT-TEC INDUSTRIES (TM)", delay: 60 },
+  { text: "> PERSONAL TERMINAL SYSTEM v2.0", delay: 50 },
+  { text: ">", delay: 120 },
+  { text: "> LOADING SERVICE REGISTRY......... OK", delay: 80 },
+  { text: "> INITIALIZING HEALTH CHECKS...... OK", delay: 80 },
+  { text: "> SCANNING SKILL AGENTS........... OK", delay: 60 },
+  { text: "> PROACTIVE TRIGGERS ONLINE....... OK", delay: 60 },
+  { text: "> ESTABLISHING API LINK........... ", delay: 200 },
+  { text: "CONNECTED", delay: 40 },
+  { text: ">", delay: 80 },
+  { text: "> ALL SYSTEMS NOMINAL", delay: 100 },
+];
+
+async function runBoot() {
+  const el = document.getElementById("bootText");
+  for (const line of BOOT_LINES) {
+    if (bootSkipped) break;
+    await sleep(line.delay);
+    for (const ch of line.text) {
+      if (bootSkipped) break;
+      el.textContent += ch;
+      await sleep(12);
+    }
+    if (!line.text.startsWith("CONNECTED")) el.textContent += "\n";
+  }
+  if (!bootSkipped) await sleep(600);
+  finishBoot();
+}
+
+function skipBoot() {
+  bootSkipped = true;
+  finishBoot();
+}
+
+function finishBoot() {
+  const bs = document.getElementById("bootScreen");
+  if (bs.style.display === "none") return;
+  bs.classList.add("fade-out");
+  setTimeout(() => {
+    bs.style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    SND.boot();
+  }, 400);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+
+// ═══════════════════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════════════════
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  const s = String(now.getSeconds()).padStart(2, "0");
+  document.getElementById("clock").textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+
+// ═══════════════════════════════════════════════════════════
+//  BOT FRAME TICKERS
+// ═══════════════════════════════════════════════════════════
+
+setInterval(() => {
+  botFrame = (botFrame + 1) % 2;
+  if (lastData) renderAgents(lastData);
+}, BOT_FRAME_INTERVAL);
+
+setInterval(() => {
+  workingFrame = (workingFrame + 1) % 2;
+}, WORKING_FRAME_INTERVAL);
+
+
+// ═══════════════════════════════════════════════════════════
+//  UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+
+function formatAge(seconds) {
+  if (!seconds && seconds !== 0) return "";
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function segBar(pctStr, width = 20) {
+  const pct = parseInt(pctStr) || 0;
+  const filled = Math.round((pct / 100) * width);
+  const empty = width - filled;
+  const color = pct >= 90 ? "#ff3333" : pct >= 75 ? "#ffaa00" : "#33ff33";
+  return `<span style="color:${color}">${"\u2588".repeat(filled)}</span><span class="dim">${"\u2591".repeat(empty)}</span>`;
+}
+
+function statusColor(status) {
+  if (status === "active") return "node-up";
+  if (status === "degraded") return "node-warn";
+  if (status === "offline") return "node-down";
+  return "node-off";
+}
+
+function addTickerEvent(text, cls = "") {
+  tickerEvents.push({ text, cls, time: Date.now() });
+  if (tickerEvents.length > 30) tickerEvents.shift();
+  renderTicker();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: AGENTS
+// ═══════════════════════════════════════════════════════════
+
+function renderAgents(data) {
+  const container = document.getElementById("agentsPanel");
+  const services = data.services || {};
+  let html = "";
+
+  for (const [sid, sdata] of Object.entries(services)) {
+    if (sdata.category !== "agent") continue;
+
+    const botId = sdata.bot_id || "generic";
+    const art = BOT_ART[botId] || BOT_ART.generic;
+    const status = sdata.status || "unknown";
+    const isWorking = sdata.is_working && status === "active";
+
+    let artText;
+    if (isWorking && art.working) {
+      artText = art.working[workingFrame % art.working.length];
+    } else if (status === "active") {
+      artText = art.frames[botFrame % art.frames.length];
+    } else if (status === "degraded") {
+      artText = art.degraded;
+    } else {
+      artText = art.dead;
+    }
+
+    const cardClass = isWorking ? "working" :
+                      status === "active" ? "active" :
+                      status === "degraded" ? "degraded" : "offline";
+
+    const statusLabel = isWorking
+      ? '<span style="color:#88ff88;font-size:8px">\u26A1 WORKING</span>'
+      : status === "active"
+        ? '<span class="ok" style="font-size:8px">NOMINAL</span>'
+        : status === "degraded"
+          ? '<span class="warn" style="font-size:8px">CAUTION</span>'
+          : '<span class="off" style="font-size:8px">OFFLINE</span>';
+
+    const sparkHtml = renderSparkline(sid);
+
+    const vats = `<div class="vats-data">
+      PID: ${sdata.pid || "\u2014"}<br>
+      Latency: ${sdata.latency_ms ? Math.round(sdata.latency_ms) + "ms" : "\u2014"}<br>
+      Log age: ${sdata.last_activity_age != null ? formatAge(sdata.last_activity_age) : "\u2014"}<br>
+      Check: ${sdata.message || "\u2014"}
+    </div>`;
+
+    html += `
+      <div class="bot-card ${cardClass}">
+        <div class="bot-art">${artText}</div>
+        <div class="bot-name">${sdata.display_name || sid}</div>
+        <div class="bot-status-label">${statusLabel}</div>
+        ${sparkHtml}
+        ${vats}
+      </div>`;
+  }
+
+  container.innerHTML = html || '<div class="dim">No agents configured</div>';
+}
+
+function renderSparkline(serviceId) {
+  const history = lastHistory[serviceId];
+  if (!history || history.length === 0) return "";
+  const recent = history.slice(-30);
+  let html = '<div class="sparkline">';
+  for (const entry of recent) {
+    const cls = entry.status === "active" ? "spark-active" :
+                entry.status === "degraded" ? "spark-degraded" :
+                entry.status === "offline" ? "spark-offline" : "spark-unknown";
+    html += `<div class="spark-seg ${cls}"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: SKILL AGENTS
+// ═══════════════════════════════════════════════════════════
+
+function renderSkillAgents(data) {
+  const container = document.getElementById("skillPanel");
+  const skills = data.skill_agents;
+  if (!skills || Object.keys(skills).length === 0) {
+    container.innerHTML = '<div class="dim">No skill agent data</div>';
+    return;
+  }
+
+  let html = "";
+  for (const [sid, sdata] of Object.entries(skills)) {
+    const artSet = SKILL_ART[sid] || SKILL_ART.debug;
+    const status = sdata.last_status || "idle";
+
+    let artKey = "idle";
+    let cardClass = "idle";
+    let statusLabel = '<span class="off" style="font-size:8px">IDLE</span>';
+
+    // Live session overrides everything
+    const hasLive = sdata.live_session && sdata.live_session.session_id;
+
+    if (hasLive) {
+      artKey = "running"; cardClass = "running";
+      const src = sdata.live_session.source || "";
+      const srcTag = src === "cowork" ? "COWORK" : src === "claude-code" ? "CC" : src === "launchd" ? "AUTO" : src.toUpperCase();
+      statusLabel = `<span style="color:#88ff88;font-size:8px">\u26A1 LIVE [${srcTag}]</span>`;
+    } else if (status === "running") {
+      artKey = "running"; cardClass = "running";
+      statusLabel = '<span style="color:#88ff88;font-size:8px">\u26A1 RUNNING</span>';
+    } else if (status === "success" || status === "completed") {
+      artKey = "active"; cardClass = "completed";
+      statusLabel = '<span class="ok" style="font-size:8px">COMPLETED</span>';
+    } else if (status === "failed" || status === "error") {
+      artKey = "failed"; cardClass = "failed";
+      statusLabel = '<span class="err" style="font-size:8px">FAILED</span>';
+    } else if (status === "timeout") {
+      artKey = "failed"; cardClass = "failed";
+      statusLabel = '<span class="warn" style="font-size:8px">TIMEOUT</span>';
+    } else if (sdata.last_run_time) {
+      artKey = "active"; cardClass = "completed";
+      statusLabel = '<span class="ok" style="font-size:8px">READY</span>';
+    }
+
+    // Source badge
+    const srcBadge = sdata.last_source
+      ? `<span class="dim" style="font-size:7px;margin-left:4px">via ${sdata.last_source}</span>`
+      : "";
+
+    let meta;
+    if (hasLive) {
+      const ls = sdata.live_session;
+      const runFor = ls.running_for < 60 ? `${ls.running_for}s` : `${Math.floor(ls.running_for / 60)}m`;
+      meta = `<div class="skill-meta" title="${ls.prompt || ''}">${runFor} active ${srcBadge}</div>`;
+    } else {
+      meta = sdata.last_run_human
+        ? `<div class="skill-meta" title="${sdata.last_prompt || ''}">${sdata.last_run_human} ${sdata.runs_today ? '(' + sdata.runs_today + ' today)' : ''} ${srcBadge}</div>`
+        : '<div class="skill-meta">No runs yet</div>';
+    }
+
+    const vats = `<div class="vats-data">
+      Last: ${sdata.last_run_human || "never"}<br>
+      Prompt: ${(sdata.last_prompt || "\u2014").substring(0, 40)}<br>
+      Runs today: ${sdata.runs_today || 0}<br>
+      Source: ${sdata.last_source || "log file"}
+    </div>`;
+
+    html += `
+      <div class="skill-card ${cardClass}">
+        <div class="skill-art">${artSet[artKey]}</div>
+        <div class="skill-name">${sdata.display_name || sid}</div>
+        <div class="skill-status-label">${statusLabel}</div>
+        ${meta}
+        ${vats}
+      </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: INFRASTRUCTURE
+// ═══════════════════════════════════════════════════════════
+
+function renderInfra(data) {
+  const container = document.getElementById("infraPanel");
+  const services = data.services || {};
+  let html = "";
+
+  for (const [sid, sdata] of Object.entries(services)) {
+    if (sdata.category !== "infrastructure") continue;
+    const status = sdata.status || "unknown";
+    const dotClass = status === "active" ? "active" : status === "degraded" ? "degraded" : "offline";
+    const itemClass = status === "offline" ? "offline" : "active";
+
+    let detail = "";
+    if (sdata.latency_ms && sdata.latency_ms > 0) detail = `${Math.round(sdata.latency_ms)}ms`;
+    if (sdata.models && sdata.models.length > 0) detail = sdata.models.join(", ");
+    if (status === "offline" && sdata.message) detail = sdata.message;
+
+    const statusText = status === "active"
+      ? '<span class="ok" style="font-size:10px">UP</span>'
+      : status === "degraded"
+        ? '<span class="warn" style="font-size:10px">DEGRADED</span>'
+        : '<span class="off" style="font-size:10px">DOWN</span>';
+
+    const vats = `<div class="vats-data">
+      Latency: ${sdata.latency_ms ? Math.round(sdata.latency_ms) + "ms" : "\u2014"}<br>
+      Check: ${sdata.message || "\u2014"}
+    </div>`;
+
+    html += `
+      <div class="infra-item ${itemClass}">
+        <div class="infra-dot ${dotClass}"></div>
+        <span class="infra-name">${sdata.display_name || sid}</span>
+        <span class="infra-detail">${detail}</span>
+        <span class="infra-status-text">${statusText}</span>
+        ${vats}
+      </div>`;
+  }
+
+  container.innerHTML = html || '<div class="dim">No infrastructure configured</div>';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: DEPENDENCY MAP
+// ═══════════════════════════════════════════════════════════
+
+function renderDepMap(data) {
+  const container = document.getElementById("depMapPanel");
+  const s = data.services || {};
+
+  const sc = (id) => statusColor(s[id]?.status);
+  const w = "wire";
+
+  // Topology: Watcher (KeepAlive) + Proactive (interval, 7 triggers)
+  // Old kalshi-monitor, coinbase-monitor, morning-brief are now proactive triggers
+  container.innerHTML = `<div class="dep-map">` +
+    `<span class="${w}">iMsg</span> <span class="${w}">\u2500\u25B8</span> <span class="${sc('imsg-watcher')}">WATCHER</span> <span class="${w}">\u2500\u25B8</span> <span class="${w}">HANDLER</span> <span class="${w}">\u2500\u25B8</span> <span class="${sc('bluebubbles')}">BB</span> <span class="${w}">\u2500\u25B8</span> <span class="${w}">iMsg</span>\n` +
+    `<span class="${w}">                                    \u25B2</span>\n` +
+    `<span class="${sc('proactive-agent')}">  PROACTIVE</span> <span class="${w}">\u2500\u25B8</span> <span class="${w}">[7 triggers + personality]</span> <span class="${w}">\u2500\u2518</span>\n` +
+    `<span class="${w}">      \u2502</span>\n` +
+    `<span class="${w}">      \u251C\u2500</span> <span class="${sc('ollama')}">OLLAMA</span>\n` +
+    `<span class="${w}">      \u2514\u2500</span> <span class="${sc('openclaw-gateway')}">GW</span>\n` +
+    `</div>`;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: SYSTEM
+// ═══════════════════════════════════════════════════════════
+
+function renderSystem(sys) {
+  const el = document.getElementById("systemPanel");
+  if (!sys || Object.keys(sys).length === 0) {
+    el.innerHTML = '<div class="dim">No system data</div>';
+    return;
+  }
+
+  let html = "";
+
+  if (sys.uptime) {
+    html += `<div class="row"><span class="row-name">Uptime</span><span class="row-detail bright">${sys.uptime}</span></div>`;
+  }
+  if (sys.load && sys.load !== "unknown") {
+    html += `<div class="row"><span class="row-name">Load</span><span class="row-detail bright">${sys.load}</span></div>`;
+  }
+
+  if (sys.cpu_user != null) {
+    const cpuPct = parseInt(sys.cpu_user) + parseInt(sys.cpu_sys || 0);
+    html += `<div class="seg-row">
+      <span class="seg-label">CPU</span>
+      <span class="seg-bar">${segBar(cpuPct, 22)}</span>
+      <span class="seg-value" style="color:${cpuPct >= 90 ? '#ff3333' : cpuPct >= 75 ? '#ffaa00' : '#33ff33'}">${cpuPct}%</span>
+    </div>`;
+  }
+
+  if (sys.memory && sys.memory.pct) {
+    const memPct = parseInt(sys.memory.pct);
+    html += `<div class="seg-row">
+      <span class="seg-label">MEM</span>
+      <span class="seg-bar">${segBar(memPct, 22)}</span>
+      <span class="seg-value" style="color:${memPct >= 90 ? '#ff3333' : memPct >= 75 ? '#ffaa00' : '#33ff33'}">${sys.memory.pct}</span>
+    </div>`;
+    html += `<div class="vats-data" style="padding-left:58px">${sys.memory.used || "?"} used / ${sys.memory.total || "?"} total</div>`;
+  }
+
+  if (sys.disk && sys.disk.pct) {
+    const diskPct = parseInt(sys.disk.pct);
+    html += `<div class="seg-row">
+      <span class="seg-label">DISK</span>
+      <span class="seg-bar">${segBar(diskPct, 22)}</span>
+      <span class="seg-value" style="color:${diskPct >= 90 ? '#ff3333' : diskPct >= 75 ? '#ffaa00' : '#33ff33'}">${sys.disk.pct}</span>
+    </div>`;
+    html += `<div class="vats-data" style="padding-left:58px">${sys.disk.used || "?"} used / ${sys.disk.avail || "?"} free / ${sys.disk.total || "?"} total</div>`;
+  }
+
+  el.innerHTML = html || '<div class="dim">No system data</div>';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: HISTOGRAM
+// ═══════════════════════════════════════════════════════════
+
+function renderHistogram(activity) {
+  const el = document.getElementById("histogramPanel");
+  if (!activity) {
+    el.innerHTML = '<div class="dim">No activity data</div>';
+    return;
+  }
+
+  const hourly = activity.hourly || new Array(24).fill(0);
+  const total = activity.messages_today || hourly.reduce((a, b) => a + b, 0);
+  const max = Math.max(...hourly, 1);
+  const currentHour = new Date().getHours();
+
+  let barsHtml = "";
+  for (let h = 0; h < 24; h++) {
+    const val = hourly[h] || 0;
+    const heightPct = (val / max) * 100;
+    const isPeak = val === max && val > 0;
+    const isCurrent = h === currentHour;
+    let cls = "hist-bar";
+    if (val > 0) cls += " has-data";
+    if (isPeak) cls += " peak";
+    if (isCurrent) cls += " current-hour";
+    barsHtml += `<div class="${cls}" style="height:${Math.max(heightPct, 2)}%" title="${h}:00 \u2014 ${val} msgs"></div>`;
+  }
+
+  const lastMsg = activity.last_message_human
+    ? `<span class="dim">Last: ${activity.last_message_human}</span>`
+    : '';
+
+  el.innerHTML = `
+    <div class="histogram-container">
+      <div class="histogram">${barsHtml}</div>
+      <div class="hist-labels">
+        <span>0</span><span>3</span><span>6</span><span>9</span>
+        <span>12</span><span>15</span><span>18</span><span>21</span>
+      </div>
+      <div class="hist-total">
+        <span class="bright">${total}</span> <span class="dim">messages today</span>
+        ${lastMsg}
+      </div>
+    </div>`;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: PROACTIVE TRIGGERS
+// ═══════════════════════════════════════════════════════════
+
+function renderTriggers(data) {
+  const container = document.getElementById("triggerPanel");
+  const triggers = data.proactive_triggers;
+  if (!triggers || Object.keys(triggers).length === 0) {
+    container.innerHTML = '<div class="dim">No trigger data</div>';
+    return;
+  }
+
+  let html = "";
+  for (const [tid, tdata] of Object.entries(triggers)) {
+    const fired = tdata.last_fired != null;
+    const itemClass = fired ? "fired" : "";
+    const dotClass = tdata.produced_output ? "fired" : "quiet";
+    const timeStr = tdata.last_fired_human || "never";
+    const outLabel = tdata.produced_output
+      ? '<span class="ok" style="font-size:9px">OUTPUT</span>'
+      : '<span class="off" style="font-size:9px">QUIET</span>';
+
+    html += `
+      <div class="trigger-item ${itemClass}">
+        <div class="trigger-name">${tdata.display_name || tid}</div>
+        <div class="trigger-time">${timeStr}</div>
+        <div style="margin-top:2px">
+          <span class="trigger-output-dot ${dotClass}"></span>
+          ${outLabel}
+        </div>
+      </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: ALERTS
+// ═══════════════════════════════════════════════════════════
+
+function renderAlerts(transitions) {
+  const bar = document.getElementById("alertBar");
+  const content = document.getElementById("alertContent");
+
+  if (!transitions || transitions.length === 0) {
+    bar.classList.remove("visible");
+    return;
+  }
+
+  bar.classList.add("visible");
+  let html = "";
+  const reversed = [...transitions].reverse();
+  for (const t of reversed) {
+    const fromLabel = t.from_status.toUpperCase();
+    const toLabel = t.to_status.toUpperCase();
+    html += `<div class="alert-entry">
+      <span class="alert-time">${t.time_str}</span>
+      ${t.display_name}: ${fromLabel} \u2192 ${toLabel}
+    </div>`;
+  }
+  content.innerHTML = html;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: LOGS
+// ═══════════════════════════════════════════════════════════
+
+function renderLogs(logFiles) {
+  const el = document.getElementById("logPanel");
+  if (!logFiles || Object.keys(logFiles).length === 0) {
+    el.innerHTML = '<div class="dim">No log files found</div>';
+    return;
+  }
+
+  const sorted = Object.entries(logFiles)
+    .sort((a, b) => a[1].age_seconds - b[1].age_seconds);
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:4px 24px;">';
+  for (const [fname, info] of sorted) {
+    const ageClass = info.age_seconds < 60 ? "ok" :
+                     info.age_seconds < 3600 ? "bright" :
+                     info.age_seconds < 86400 ? "dim" : "off";
+    const freshClass = info.age_seconds < 60 ? "log-fresh" : "";
+    html += `
+      <div class="log-entry ${freshClass}">
+        <span class="log-file">${fname}</span>
+        <span class="log-age ${ageClass}">${info.age_human}</span>
+      </div>`;
+  }
+  html += "</div>";
+  el.innerHTML = html;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: UPTIME STREAK
+// ═══════════════════════════════════════════════════════════
+
+function renderStreak(data) {
+  const el = document.getElementById("streakValue");
+  const streak = data.uptime_streak;
+  if (streak && streak.human) {
+    el.textContent = streak.human;
+    el.parentElement.title = `All services up since ${streak.since || "unknown"}`;
+    if (streak.seconds > 86400) el.style.color = "#33ff33";
+    else if (streak.seconds > 3600) el.style.color = "#88ff88";
+    else el.style.color = "#aaffaa";
+  } else {
+    el.textContent = "--";
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER: TICKER
+// ═══════════════════════════════════════════════════════════
+
+function renderTicker() {
+  const track = document.getElementById("tickerTrack");
+  if (tickerEvents.length === 0) return;
+
+  const items = tickerEvents.map(e => {
+    return `<span class="ticker-item ${e.cls}">${e.text}</span>`;
+  }).join('<span class="ticker-sep">\u2502</span>');
+
+  track.innerHTML = items;
+
+  const len = track.scrollWidth;
+  const speed = Math.max(30, Math.min(90, len / 8));
+  track.style.setProperty("--ticker-speed", speed + "s");
+}
+
+function updateTickerFromData(data) {
+  const transitions = data.transitions || [];
+  for (const t of transitions) {
+    const key = `${t.service_id}-${t.timestamp}`;
+    if (!tickerEvents.find(e => e.key === key)) {
+      const cls = t.to_status === "offline" ? "err" : t.to_status === "active" ? "ok" : "warn";
+      tickerEvents.push({
+        text: `${t.time_str} ${t.display_name}: ${t.from_status.toUpperCase()} \u2192 ${t.to_status.toUpperCase()}`,
+        cls, key, time: t.timestamp * 1000
+      });
+    }
+  }
+  if (tickerEvents.length > 30) tickerEvents = tickerEvents.slice(-30);
+  renderTicker();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  V.A.T.S. MODE
+// ═══════════════════════════════════════════════════════════
+
+let vatsActive = false;
+
+function toggleVATS() {
+  vatsActive = !vatsActive;
+  document.body.classList.toggle("vats-active", vatsActive);
+  SND.beep(vatsActive ? 1200 : 600, 0.08);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  KEYBOARD HANDLERS
+// ═══════════════════════════════════════════════════════════
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "v" || e.key === "V") toggleVATS();
+  if (e.key === "s" || e.key === "S") SND.toggle();
+});
+
+
+// ═══════════════════════════════════════════════════════════
+//  API POLLING
+// ═══════════════════════════════════════════════════════════
+
+let previousStatuses = {};
+
+async function fetchStatus() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/status`, { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    lastData = data;
+    setApiStatus("ok", `LIVE \u2014 ${data.timestamp || "connected"}`);
+    updateUI(data);
+    detectTransitions(data);
+  } catch (e) {
+    setApiStatus("err", "OFFLINE");
+    document.getElementById("offlineBanner").classList.add("visible");
+    SND.error();
+  }
+}
+
+async function fetchHistory() {
+  try {
+    const resp = await fetch(`${API_BASE}/api/history`, { cache: "no-store" });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    lastHistory = data.history || {};
+  } catch (e) {}
+}
+
+function setApiStatus(state, label) {
+  const dot = document.getElementById("apiDot");
+  const lbl = document.getElementById("apiLabel");
+  dot.className = `api-dot ${state}`;
+  lbl.textContent = label;
+  lbl.className = state === "ok" ? "dim" : (state === "err" ? "err" : "warn");
+  if (state === "ok") {
+    document.getElementById("offlineBanner").classList.remove("visible");
+  }
+}
+
+function updateUI(data) {
+  renderAgents(data);
+  renderSkillAgents(data);
+  renderInfra(data);
+  renderDepMap(data);
+  renderSystem(data.system || {});
+  renderHistogram(data.activity || {});
+  renderTriggers(data);
+  renderAlerts(data.transitions || []);
+  renderLogs(data.log_files || {});
+  renderStreak(data);
+  updateTickerFromData(data);
+}
+
+function detectTransitions(data) {
+  const services = data.services || {};
+  for (const [sid, sdata] of Object.entries(services)) {
+    const prev = previousStatuses[sid];
+    const curr = sdata.status;
+    if (prev && prev !== curr) {
+      SND.transition();
+      addTickerEvent(
+        `${sdata.display_name}: ${prev.toUpperCase()} \u2192 ${curr.toUpperCase()}`,
+        curr === "offline" ? "err" : curr === "active" ? "ok" : "warn"
+      );
+    }
+    previousStatuses[sid] = curr;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+
+runBoot();
+fetchStatus();
+fetchHistory();
+setInterval(fetchStatus, POLL_INTERVAL);
+setInterval(fetchHistory, 60000);
+</script>
+</body>
+</html>

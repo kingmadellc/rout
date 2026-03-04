@@ -1,0 +1,79 @@
+# Rout Service Registry — Single Source of Truth
+# Adding a new agent = add a YAML block. The API and dashboard read from this.
+#
+# check_type: launchd | http | socket | log-activity
+#   launchd     — checks PID via `launchctl list` (for KeepAlive daemons)
+#   http        — GET request, 2xx = alive
+#   socket      — TCP connect to host:port
+#   log-activity — skip PID check, use log file recency only (for interval/cron services)
+#
+# category: agent | infrastructure
+#   agent = autonomous process that does work (gets animated Vault Boy bot card)
+#   infrastructure = dependency/service that agents rely on (gets status dot)
+#
+# lifecycle: keepalive | interval (informational, used by dashboard)
+#   keepalive — long-running daemon with persistent PID
+#   interval  — run-and-exit on a schedule (launchd StartInterval or cron)
+#
+# stale_threshold: seconds of inactivity before status becomes "degraded"
+# working_threshold: seconds — if log modified within this window, bot shows "working" animation
+# expected_interval: seconds between runs (for interval lifecycle, used by dashboard)
+# log_file: optional, filename in ~/.openclaw/logs/ for activity tracking
+#
+# NOTE: Skill agents (scaffolder, pipeline, deploy, debug) are NOT in this registry.
+# They're scanned automatically from ~/Library/Logs/rout-agent-*.log by the status API.
+# Proactive triggers are scanned from ~/.openclaw/logs/proactive*.log.
+# See status_api.py: SkillAgentScanner and ProactiveTriggerScanner classes.
+#
+# kalshi-monitor, coinbase-monitor, morning-brief removed —
+# consolidated into proactive-agent triggers (Edge Engine, Cross-Platform, etc.)
+
+services:
+  imsg-watcher:
+    display_name: "iMessage Watcher"
+    bot_id: "watcher"
+    category: "agent"
+    lifecycle: "keepalive"
+    check_type: "launchd"
+    launchd_label: "com.rout.imsg-watcher"
+    stale_threshold: 7200
+    working_threshold: 30
+    log_file: "imsg_watcher.log"
+
+  proactive-agent:
+    display_name: "Proactive Agent"
+    bot_id: "proactive"
+    category: "agent"
+    lifecycle: "interval"
+    check_type: "log-activity"
+    expected_interval: 900
+    stale_threshold: 1800
+    working_threshold: 120
+    log_file: "proactive_agent.log"
+
+  bluebubbles:
+    display_name: "BlueBubbles"
+    bot_id: "bubbles"
+    category: "infrastructure"
+    check_type: "socket"
+    host: "127.0.0.1"
+    port: 1234
+    timeout: 3
+
+  ollama:
+    display_name: "Ollama"
+    bot_id: "ollama"
+    category: "infrastructure"
+    check_type: "http"
+    url: "http://localhost:11434/api/tags"
+    timeout: 3
+    parse_models: true
+
+  openclaw-gateway:
+    display_name: "OpenClaw Gateway"
+    bot_id: "gateway"
+    category: "infrastructure"
+    check_type: "socket"
+    host: "127.0.0.1"
+    port: 18789
+    timeout: 3

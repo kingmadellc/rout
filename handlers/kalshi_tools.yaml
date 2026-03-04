@@ -1,0 +1,122 @@
+tools:
+  kalshi_portfolio:
+    description: "Get live Kalshi portfolio: balance, positions, P&L, exit candidates."
+    safety: safe
+    input_schema:
+      type: object
+      properties: {}
+
+  kalshi_get_market:
+    description: "REQUIRED before buy/sell. Get live bid/ask/spread for a market ticker."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        ticker:
+          type: string
+          description: "Market ticker (e.g. KXALIENS-27)"
+      required: [ticker]
+
+  kalshi_scan:
+    description: "LIVE scan of Kalshi markets — fetches fresh data NOW. Use this when user asks about edge, opportunities, or 'what looks good'. Ranks by spread tightness, price uncertainty, liquidity, and time value. Takes 5-10 seconds. filter='sports' for sports markets."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        filter:
+          type: string
+          description: "Optional: 'sports' for sports markets only, empty for macro/political default."
+          default: ""
+
+  kalshi_markets:
+    description: "Read CACHED opportunities from last proactive Qwen edge analysis (runs every 90min). Use for quick reference when user asks about previously-identified Qwen edge. For LIVE fresh data, use kalshi_scan instead. filter='sports'|'all'|'' (macro default)."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        filter:
+          type: string
+          description: "Optional: 'sports' for sports only, 'all' for everything, empty for macro default."
+          default: ""
+
+  kalshi_cache_status:
+    description: "Research cache status: last update time, insight count, top edges."
+    safety: safe
+    input_schema:
+      type: object
+      properties: {}
+
+  kalshi_buy:
+    description: "Place a limit BUY. Call kalshi_get_market first for ask price. Use ask for instant fill."
+    safety: destructive
+    input_schema:
+      type: object
+      properties:
+        ticker:
+          type: string
+          description: "Market ticker (e.g. KXALIENS-27)"
+        side:
+          type: string
+          description: "'yes' or 'no'"
+        quantity:
+          type: integer
+          description: "Number of contracts"
+        price_cents:
+          type: integer
+          description: "Limit price in cents (1-99). Use the ask price from kalshi_get_market for instant fill."
+      required: [ticker, side, quantity, price_cents]
+
+  kalshi_sell:
+    description: "Place a limit SELL. Call kalshi_get_market first for bid price. Use kalshi_smart_sell for quick exits."
+    safety: destructive
+    input_schema:
+      type: object
+      properties:
+        ticker:
+          type: string
+          description: "Market ticker (e.g. KXALIENS-27)"
+        side:
+          type: string
+          description: "'yes' or 'no' — the side you hold"
+        quantity:
+          type: integer
+          description: "Number of contracts to sell"
+        price_cents:
+          type: integer
+          description: "Limit price in cents (1-99). Use the bid price from kalshi_get_market for instant fill."
+      required: [ticker, side, quantity, price_cents]
+
+  kalshi_smart_sell:
+    description: "Sell at live bid (auto-fetched). Quick exit, no kalshi_get_market needed."
+    safety: destructive
+    input_schema:
+      type: object
+      properties:
+        ticker:
+          type: string
+          description: "Market ticker (e.g. KXALIENS-27)"
+        side:
+          type: string
+          description: "'yes' or 'no' — the side you hold"
+        quantity:
+          type: integer
+          description: "Number of contracts to sell"
+      required: [ticker, side, quantity]
+
+  kalshi_cancel_order:
+    description: "Cancel an open order by ID."
+    safety: destructive
+    input_schema:
+      type: object
+      properties:
+        order_id:
+          type: string
+          description: "The order ID to cancel"
+      required: [order_id]
+
+  kalshi_open_orders:
+    description: "List all open/resting limit orders with ticker, side, qty, price, order ID."
+    safety: safe
+    input_schema:
+      type: object
+      properties: {}

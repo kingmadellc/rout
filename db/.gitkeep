@@ -1,0 +1,2 @@
+# Database directory for Vehicle Fleet Manager and other SQLite databases
+# Files in this directory are typically not committed (see .gitignore)

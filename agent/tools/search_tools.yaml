@@ -1,0 +1,11 @@
+tools:
+  web_search:
+    description: "Search the web for current info (news, prices, scores, weather, facts)."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: "Search query"
+      required: [query]

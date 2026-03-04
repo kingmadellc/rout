@@ -1,0 +1,51 @@
+tools:
+  read_calendar:
+    description: "Read calendar events for a given day (0=today, 1=tomorrow, etc)."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        date_offset_days:
+          type: integer
+          description: "0 for today, 1 for tomorrow, 2 for day after, etc. Default 0."
+          default: 0
+
+  read_calendar_range:
+    description: "Read calendar events for the next N days."
+    safety: safe
+    input_schema:
+      type: object
+      properties:
+        days:
+          type: integer
+          description: "Number of days to look ahead. Default 7."
+          default: 7
+
+  create_calendar_event:
+    description: "Create a calendar event."
+    safety: destructive
+    input_schema:
+      type: object
+      properties:
+        title:
+          type: string
+          description: "Event title"
+        date_str:
+          type: string
+          description: "Date in natural format like 'February 28, 2026' or 'March 1 2026'"
+        start_hour:
+          type: integer
+          description: "Start hour in 24h format (e.g., 14 for 2 PM)"
+        start_min:
+          type: integer
+          description: "Start minute (0-59). Default 0."
+          default: 0
+        duration_hours:
+          type: number
+          description: "Duration in hours. Default 1.0."
+          default: 1.0
+        calendar_name:
+          type: string
+          description: "Calendar name (e.g., 'Home', 'Work'). Default 'Home'."
+          default: "Home"
+      required: [title, date_str, start_hour]

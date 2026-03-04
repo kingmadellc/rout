@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rout Demo — iPhone Frame</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif;
+    overflow: hidden;
+  }
+
+  .phone {
+    position: relative;
+    width: 390px;
+    height: 844px;
+    border-radius: 55px;
+    background: #1a1a1a;
+    box-shadow:
+      0 0 0 2px #333,
+      0 0 0 4px #1a1a1a,
+      0 0 0 6px #111,
+      0 30px 80px rgba(0,0,0,0.8),
+      inset 0 0 2px rgba(255,255,255,0.05);
+    overflow: hidden;
+  }
+
+  /* Dynamic Island */
+  .dynamic-island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 126px;
+    height: 37px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 10;
+  }
+
+  /* Status bar */
+  .status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 54px;
+    padding: 14px 30px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .status-bar .time { margin-left: 4px; }
+  .status-bar .icons {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-right: 4px;
+  }
+  .status-bar .icons svg { width: 18px; height: 18px; fill: #fff; }
+
+  /* Screen area */
+  .screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 55px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .screen video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 55px;
+  }
+
+  /* Home indicator */
+  .home-indicator {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 134px;
+    height: 5px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+    z-index: 10;
+  }
+
+  /* Side buttons */
+  .btn-left-1 {
+    position: absolute;
+    left: -3px;
+    top: 180px;
+    width: 3px;
+    height: 32px;
+    background: #333;
+    border-radius: 2px 0 0 2px;
+  }
+  .btn-left-2 {
+    position: absolute;
+    left: -3px;
+    top: 240px;
+    width: 3px;
+    height: 60px;
+    background: #333;
+    border-radius: 2px 0 0 2px;
+  }
+  .btn-left-3 {
+    position: absolute;
+    left: -3px;
+    top: 310px;
+    width: 3px;
+    height: 60px;
+    background: #333;
+    border-radius: 2px 0 0 2px;
+  }
+  .btn-right {
+    position: absolute;
+    right: -3px;
+    top: 260px;
+    width: 3px;
+    height: 80px;
+    background: #333;
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Upload overlay */
+  .upload-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.85);
+    border-radius: 55px;
+    z-index: 20;
+    cursor: pointer;
+    transition: opacity 0.3s;
+  }
+  .upload-overlay.hidden { opacity: 0; pointer-events: none; }
+  .upload-overlay svg { width: 48px; height: 48px; fill: #666; margin-bottom: 16px; }
+  .upload-overlay p { color: #888; font-size: 15px; }
+  .upload-overlay p.sub { color: #555; font-size: 12px; margin-top: 6px; }
+
+  /* Controls */
+  .controls {
+    margin-top: 30px;
+    display: flex;
+    gap: 16px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .controls.visible { opacity: 1; }
+  .controls button {
+    background: #222;
+    border: 1px solid #333;
+    color: #ccc;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .controls button:hover { background: #333; }
+
+  /* Branding */
+  .brand {
+    position: absolute;
+    bottom: 24px;
+    color: #333;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  /* For screen-recording: size the page to exactly fit the phone + padding */
+  @media screen {
+    body { padding: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="btn-left-1"></div>
+  <div class="btn-left-2"></div>
+  <div class="btn-left-3"></div>
+  <div class="btn-right"></div>
+
+  <div class="screen">
+    <video id="demoVideo" loop muted playsinline></video>
+  </div>
+
+  <div class="dynamic-island"></div>
+  <div class="home-indicator"></div>
+
+  <div class="upload-overlay" id="uploadOverlay">
+    <svg viewBox="0 0 24 24"><path d="M12 2L6 8h4v8h4V8h4L12 2zM4 18v2h16v-2H4z"/></svg>
+    <p>Drop your demo recording here</p>
+    <p class="sub">.mov or .mp4 — rout-demo-raw.mov from Desktop</p>
+  </div>
+</div>
+
+<div class="controls" id="controls">
+  <button onclick="document.getElementById('demoVideo').currentTime=0; document.getElementById('demoVideo').play()">Replay</button>
+  <button onclick="toggleLoop()">Loop: ON</button>
+  <button onclick="document.getElementById('demoVideo').playbackRate = document.getElementById('demoVideo').playbackRate === 1 ? 0.75 : 1">Speed</button>
+</div>
+
+<input type="file" id="fileInput" accept="video/*" style="display:none">
+
+<script>
+const video = document.getElementById('demoVideo');
+const overlay = document.getElementById('uploadOverlay');
+const controls = document.getElementById('controls');
+const fileInput = document.getElementById('fileInput');
+
+// Click to upload
+overlay.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files[0]) loadVideo(e.target.files[0]);
+});
+
+// Drag and drop
+overlay.addEventListener('dragover', (e) => { e.preventDefault(); overlay.style.borderColor = '#555'; });
+overlay.addEventListener('dragleave', () => { overlay.style.borderColor = 'transparent'; });
+overlay.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) loadVideo(e.dataTransfer.files[0]);
+});
+
+function loadVideo(file) {
+  const url = URL.createObjectURL(file);
+  video.src = url;
+  video.muted = false;
+  video.play();
+  overlay.classList.add('hidden');
+  controls.classList.add('visible');
+}
+
+function toggleLoop() {
+  video.loop = !video.loop;
+  event.target.textContent = `Loop: ${video.loop ? 'ON' : 'OFF'}`;
+}
+
+// Also support passing ?src=path for local dev
+const params = new URLSearchParams(window.location.search);
+if (params.get('src')) {
+  video.src = params.get('src');
+  video.play();
+  overlay.classList.add('hidden');
+  controls.classList.add('visible');
+}
+</script>
+</body>
+</html>
